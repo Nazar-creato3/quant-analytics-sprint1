@@ -25,7 +25,7 @@ asyncpg>=0.30.0
 # scripts/seed.py -> app.core.logging
 structlog>=24.4.0
 # app.utils.cache (settings, grid endpoints) + health check
-redis[asyncio]>=5.1.1,<6
+redis[asyncio]>=5.1.1,<9
 # app.utils.metrics (create_app startup)
 prometheus-client>=0.21.0
 # Prompt 29 — traces without collector still start the SDK
