@@ -100,7 +100,7 @@ anyio[trio]==4.14.2
 hypothesis==6.112.1
 
 # ── Position audit tear sheets ────────────────────────────────────────────────
-quantstats==0.0.62
+quantstats==0.0.86
 skfolio==0.6.0
 ipython>=8.0.0
 matplotlib>=3.8.0

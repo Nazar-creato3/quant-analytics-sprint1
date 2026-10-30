@@ -28,7 +28,7 @@ opentelemetry-api==1.45.1
 opentelemetry-sdk==1.45.1
 opentelemetry-exporter-otlp-proto-http==1.45.1
 # K6 fund report (also pinned in pyproject.toml / uv.lock / requirements.txt).
-quantstats==0.0.62
+quantstats==0.0.86
 ipython>=8.0.0
 matplotlib>=3.8.0
 seaborn>=0.13.0
