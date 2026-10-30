@@ -1,0 +1,44 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: "45 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  trivy:
+    name: Trivy filesystem scan
+    runs-on: [self-hosted, heavy]
+    timeout-minutes: 12
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Trivy binary (no Docker)
+        env:
+          TRIVY_VERSION: "0.58.1"
+        run: |
+          set -euo pipefail
+          dest="${RUNNER_TEMP}/trivy"
+          mkdir -p "$dest"
+          # Linux x64 runner (label heavy). Official asset name uses capital L.
+          asset="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          url="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${asset}"
+          curl -fsSL -o "${RUNNER_TEMP}/trivy.tgz" "$url"
+          tar -xzf "${RUNNER_TEMP}/trivy.tgz" -C "$dest" trivy
+          echo "$dest" >> "$GITHUB_PATH"
+          ls -la "$dest"
+      - name: Scan backend filesystem
+        run: |
+          set -euo pipefail
+          trivy version
+          trivy fs --severity CRITICAL,HIGH --exit-code 0 backend

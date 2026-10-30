@@ -1,0 +1,58 @@
+# =============================================================================
+# Caddyfile — production edge for the Quant Analytics platform
+#
+# Caddy obtains and renews Let's Encrypt certificates automatically for {$DOMAIN}
+# as long as ports 80 and 443 are reachable and DNS A/AAAA records point here.
+#
+# Routing:
+#   /api/*  -> backend:8000   (REST API + websockets, incl. /api/v1/health,
+#                              /api/v1/ops/pilot-status)
+#   /*      -> frontend:3000  (Next.js app, incl. the /ops/pilot page)
+#
+# Rate limiting is enforced in FastAPI (Redis). Caddy forwards client IP via
+# X-Forwarded-For; backend trusts only hops from TRUSTED_PROXY_CIDRS.
+#
+# Env vars are injected by docker-compose.prod.yml:
+#   DOMAIN      public hostname (e.g. quant.example.com)
+#   ACME_EMAIL  contact email for Let's Encrypt expiry notices
+# =============================================================================
+
+{
+	email {$ACME_EMAIL}
+	# For staging/testing certificates, uncomment to avoid Let's Encrypt rate limits:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	# Security headers (frontend also sets some via next.config.js)
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Backend API + websockets
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# MLflow is NOT published: it has no authentication, and anyone could read,
+	# overwrite or delete experiments and artifacts. Ops access: SSH tunnel
+	# to the server, then docker compose port mlflow 5000.
+	handle /mlflow* {
+		respond 404
+	}
+
+	# Everything else -> Next.js frontend
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

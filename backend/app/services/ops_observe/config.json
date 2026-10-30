@@ -1,0 +1,6 @@
+{
+  "api_p95_ms": 500,
+  "report_seconds": 180,
+  "sync_timeout_seconds": null,
+  "availability_target": null
+}

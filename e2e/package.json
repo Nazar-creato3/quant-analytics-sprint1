@@ -1,0 +1,19 @@
+{
+  "name": "apex-intel-e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:login": "playwright test journeys/login.spec.ts",
+    "test:ia-cycle": "playwright test journeys/ia-cycle.spec.ts",
+    "test:quotes-charts": "playwright test journeys/quotes-charts.spec.ts",
+    "test:screener": "playwright test journeys/screener.spec.ts",
+    "test:market-analysis": "playwright test journeys/market-analysis.spec.ts",
+    "test:terminal-cycle": "playwright test journeys/terminal-cycle.spec.ts",
+    "test:investment-profile": "playwright test journeys/investment-profile.spec.ts",
+    "test:public-site": "playwright test journeys/public-site.spec.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.55.1"
+  }
+}

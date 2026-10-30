@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-base.txt requirements-tinkoff.txt ./
+RUN pip install --no-cache-dir -r requirements-tinkoff.txt \
+    && pip install --no-cache-dir --no-deps \
+      "tinkoff-investments @ git+https://github.com/Tinkoff/invest-python.git@1cc84950266d62cd0bc7a43ad764dddfd4252630"
+
+COPY settings.py tinkoff_client.py ./
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "tinkoff_client.py"]

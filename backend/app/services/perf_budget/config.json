@@ -1,0 +1,9 @@
+{
+  "target_users": 1000,
+  "target_positions": 200,
+  "target_history_days": 1260,
+  "measured_positions": 200,
+  "measured_days": 20,
+  "ceiling_ms": 2000,
+  "load_workers": 32
+}

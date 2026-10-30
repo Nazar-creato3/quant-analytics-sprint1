@@ -1,0 +1,40 @@
+# Minimal backend deps for local dev (API + migrations + seed), no ML/sklearn stack.
+# Install: python -m pip install -r requirements-backend-minimal.txt
+# Migrate: .\scripts\run_migrate.ps1
+# Seed:    .\scripts\run_seed.ps1   (from backend/)
+#
+# On Python 3.14+, use flexible versions below (pinned 2.9.x pydantic has no cp314 wheel).
+# On 3.11-3.13 you can align pins with backend/requirements.txt if you prefer reproducibility.
+
+fastapi>=0.142.2
+uvicorn[standard]>=0.30.6
+pydantic>=2.13.5
+pydantic-settings>=2.15.0
+email-validator>=2.0.0
+sqlalchemy>=2.0.36,<2.1
+alembic>=1.13.3
+psycopg2-binary>=2.9.9
+PyJWT==2.15.1
+# AES-GCM field encryption; previously pulled only via python-jose[cryptography]
+cryptography>=42.0.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.0
+python-dotenv>=1.2.2
+# Alembic env.py loads async SQLAlchemy engine (DATABASE_URL uses asyncpg)
+asyncpg>=0.30.0
+# scripts/seed.py -> app.core.logging
+structlog>=24.4.0
+# app.utils.cache (settings, grid endpoints) + health check
+redis[asyncio]>=5.1.1,<6
+# app.utils.metrics (create_app startup)
+prometheus-client>=0.21.0
+# Prompt 29 — traces without collector still start the SDK
+opentelemetry-api==1.45.1
+opentelemetry-sdk==1.45.1
+opentelemetry-exporter-otlp-proto-http==1.45.1
+# FastAPI form uploads (used by some endpoints)
+python-multipart>=0.0.31
+# Optional: scripts/seed.py --ingest (market data bootstrap)
+# celery[redis]>=5.6.3
+# httpx>=0.27.2
+# yfinance>=0.2.44

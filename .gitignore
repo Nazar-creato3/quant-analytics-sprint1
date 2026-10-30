@@ -1,0 +1,234 @@
+# ── Node ──────────────────────────────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+.ci-e2e/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Agent skills (local installs; do not commit bulk skill packs) ─────────────
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/ui-ux-pro-max/
+!.agents/skills/ui-ux-pro-max/**
+
+.next/
+out/
+.npm/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Secrets / env ─────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.*.local
+!.env.example.local
+!backend/.env.example.local
+frontend/.env.local
+*.pem
+*.key
+# Operator key drops (never commit)
+us_fred_key.txt
+*key*.txt
+*keys*.txt
+ключи*.txt
+*keys*.env
+*ключи*
+*токены*
+рыночные данные/
+api_keys*
+venue_keys*
+credentials*
+*.secrets
+staging.env
+backend/grid_bot/config/staging.env
+*КЛЮЧИ*
+*keys*.docx
+
+# ── Crypto stack / third_party clones (large; local only) ─────────────────────
+third_party/
+vendor/
+infra/freqtrade/user_data/logs/*
+!infra/freqtrade/user_data/logs/.gitkeep
+infra/freqtrade/user_data/strategies/SampleStrategy.py
+infra/freqtrade/user_data/strategies/ApexSignalBridge.py
+infra/freqtrade/user_data/tradesv3.sqlite*
+infra/freqtrade/user_data/config.testnet.json
+infra/freqtrade/user_data/data/
+.venv-mcp/
+# Keep docs/README about clones; do not commit full Fincept/ccxt trees
+.cursor/mcp.secrets.json
+mcp.local.json
+
+# ── Understand Anything (dev-only code graph/cache) ───────────────────────────
+.ua/
+.understand-anything/
+
+# ── Agent / analysis data access: never commit secrets folders ───────────────
+ключи\ и\ токены/
+"ключи и токены"/
+**/ключи и токены/**
+
+# ── ML models (large binary files — use DVC or model registry instead) ────────
+backend/models/finrl/*.json
+backend/models/*.pkl
+backend/models/*.joblib
+backend/models/*.pt
+backend/models/*.ckpt
+backend/models/*.h5
+!backend/models/.gitkeep
+!backend/models/direction_lgbm.pkl
+!backend/models/direction_lgbm_calibrator.pkl
+!backend/model_seeds/direction_lgbm.pkl
+!backend/model_seeds/direction_lgbm_calibrator.pkl
+
+# ── DB ────────────────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Ops backups / golden baseline artifacts (never commit dumps) ─────────────
+backups/
+.migration-kit/
+golden-baseline/
+.deploy/last-good-release.json
+.deploy/previous-release.json
+.deploy/floor-release.json
+.deploy/deploy-*.tar
+_cp_backup.lf.sh
+
+# ── Backtest results ──────────────────────────────────────────────────────────
+backtest_results/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+.docker/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Local runtime / scratch ───────────────────────────────────────────────────
+var/
+backend/var/
+backend/pytest_output.txt
+temp/
+tmp/
+
+# ── Accidental CLI / pip artifacts (empty marker files) ───────────────────────
+/aider
+/cd
+/pytest
+/python
+/backend/5
+/200
+/308
+/404
+/_tmp_*.py
+/_round2_*
+/_vps_circuit_deploy.sh
+/_vps_fix_chronos.sh
+/_vps_news_*.py
+
+backend/data/news/*.csv
+backend/data/news/*.zip
+backend/data/eurostat/*.csv
+backend/data/eurostat/*.tsv
+!backend/data/eurostat/.gitkeep
+backend/data/stooq/current/
+backend/data/stooq/current.bak/
+backend/data/stooq/downloads/
+backend/data/stooq/tmp/
+backend/data/stooq/manifest.json
+backend/data/stooq/inbox/*.zip
+!backend/data/stooq/inbox/.gitkeep
+backend/data/fred/current/
+backend/data/fred/manifest.json
+!backend/data/fred/.gitkeep
+backend/data/fred/current/fa_fmp/
+backend/data/equity_eod/current/
+backend/data/equity_eod/manifest.json
+!backend/data/equity_eod/.gitkeep
+backend/data/digests/
+!backend/data/digests/.gitkeep
+backend/data/qc_lean/
+!backend/data/qc_lean/.gitkeep
+
+coverage.txt
+backend_grid_bot_*.txt
+
+# ── Certificates ─────────────────────────────────────────────────────────────
+infrastructure/nginx/certs/
+.aider*
+
+# ── Local Phase 0 backup target ───────────────────────────────────────────────
+.data/
+
+# ── Local scratch / agent / e2e / Russian data dumps (never commit) ──────────
+.env*
+!.env.example
+!.env.example.local
+!.env.e2e.example
+!.env.stand.example
+!backend/.env.example.local
+backend/data/e2e_demo/
+backend/data/decision_core/
+.stand-auth
+.stand-hash
+infrastructure/caddy/Caddyfile.stand.runtime
+_operator/stand-credentials.txt
+.venv*/
+.tmp*/
+.checkpoints/
+e2e/test-results/
+новостные данные/
+
+# Runtime outputs written by local runs/tests (not source)
+backend/models/forecast_cs_latest.json
+backend/data/risk_shadow/
+backend/data/regime_shadow/
+backend/data/goals_shadow/
+backend/data/execution_tape/
+frontend/AGENTS.md
+frontend/CLAUDE.md
+dump.rdb
+
+# Runtime data written by the backend into the bind-mounted ./data
+data/state/
+data/price_history/
+data/us_book/
+
+# Runtime log of ensemble-vs-classifier comparisons (written by the pipeline)
+backend/data/ensemble_shadow/

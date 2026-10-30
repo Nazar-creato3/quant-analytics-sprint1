@@ -1,0 +1,13 @@
+{
+  "rbc": "internal_only",
+  "interfax": "internal_only",
+  "investing_com": "internal_only",
+  "newsapi": "awaiting",
+  "gnews": "internal_only",
+  "newscatcher": "internal_only",
+  "gdelt": "internal_only",
+  "cryptopanic": "internal_only",
+  "finimpulse": "internal_only",
+  "archive_unlicensed": "internal_only",
+  "financial_csv_dataset": "internal_only"
+}

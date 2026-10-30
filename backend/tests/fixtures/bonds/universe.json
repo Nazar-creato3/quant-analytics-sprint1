@@ -1,0 +1,123 @@
+{
+  "as_of": "2026-10-13",
+  "settlement": "2026-10-13",
+  "source": "tests/fixtures/bonds/universe.json",
+  "macro": {
+    "key_rate": 0.16,
+    "ruonia": 0.159,
+    "cpi_yoy": 0.08,
+    "ndfl_coupon": 0.13,
+    "ndfl_note": "K3 не готов: ставка 13% с пометкой"
+  },
+  "g_curve": [
+    {"tenor_years": 1.0, "yield": 0.07, "as_of": "2026-10-13", "source": "ISS zcyc fixture"},
+    {"tenor_years": 3.0, "yield": 0.075, "as_of": "2026-10-13", "source": "ISS zcyc fixture"},
+    {"tenor_years": 5.0, "yield": 0.08, "as_of": "2026-10-13", "source": "ISS zcyc fixture"}
+  ],
+  "g_spread_warn_pp": 5.0,
+  "references": [
+    {
+      "figi": "OFZ26238",
+      "secid": "SU26238RMFS4",
+      "name": "ОФЗ-ПД 26238",
+      "kind": "ofz_pd",
+      "currency": "RUB",
+      "face": 1000,
+      "coupon_type": "fixed",
+      "floater": false,
+      "inflation_linked": false,
+      "amortizing": false,
+      "qualified_only": false,
+      "risk_level": "low",
+      "annual_coupon": 70.0,
+      "dirty_price": 1000.0,
+      "clean_price": 1000.0,
+      "aci": 0.0,
+      "qty_demo": 10,
+      "maturity": "2029-10-13",
+      "offer_date": null,
+      "offer_kind": null,
+      "next_event": "2027-04-13 coupon",
+      "source": "tinvest",
+      "cashflows": [
+        {"on_date": "2027-04-13", "amount_per_bond": 35.0, "type": "coupon", "status": "known", "source": "tinvest"},
+        {"on_date": "2027-10-13", "amount_per_bond": 35.0, "type": "coupon", "status": "known", "source": "tinvest"},
+        {"on_date": "2028-04-13", "amount_per_bond": 35.0, "type": "coupon", "status": "known", "source": "tinvest"},
+        {"on_date": "2028-10-13", "amount_per_bond": 35.0, "type": "coupon", "status": "known", "source": "tinvest"},
+        {"on_date": "2029-04-13", "amount_per_bond": 35.0, "type": "coupon", "status": "known", "source": "tinvest"},
+        {"on_date": "2029-10-13", "amount_per_bond": 1035.0, "type": "coupon_plus_redemption", "status": "known", "source": "tinvest"}
+      ]
+    },
+    {
+      "figi": "CORPAMORT",
+      "secid": "RU000A101XYZ",
+      "name": "Корп. с амортизацией и офертой",
+      "kind": "corp_amort_put",
+      "currency": "RUB",
+      "face": 1000,
+      "coupon_type": "fixed",
+      "floater": false,
+      "inflation_linked": false,
+      "amortizing": true,
+      "qualified_only": true,
+      "risk_level": "high",
+      "annual_coupon": 90.0,
+      "dirty_price": 1010.0,
+      "clean_price": 1005.0,
+      "aci": 5.0,
+      "qty_demo": 5,
+      "maturity": "2028-10-13",
+      "offer_date": "2027-10-13",
+      "offer_kind": "put",
+      "next_event": "2027-10-13 put",
+      "source": "tinvest",
+      "cashflows": [
+        {"on_date": "2027-04-13", "amount_per_bond": 45.0, "type": "coupon", "status": "known", "source": "tinvest"},
+        {"on_date": "2027-10-13", "amount_per_bond": 345.0, "type": "coupon_plus_amort", "status": "known", "source": "tinvest"},
+        {"on_date": "2028-04-13", "amount_per_bond": 31.5, "type": "coupon", "status": "known", "source": "tinvest"},
+        {"on_date": "2028-10-13", "amount_per_bond": 731.5, "type": "coupon_plus_redemption", "status": "known", "source": "tinvest"}
+      ],
+      "cashflows_to_offer": [
+        {"on_date": "2027-04-13", "amount_per_bond": 45.0, "type": "coupon", "status": "known", "source": "tinvest"},
+        {"on_date": "2027-10-13", "amount_per_bond": 745.0, "type": "coupon_plus_put", "status": "known", "source": "tinvest"}
+      ]
+    },
+    {
+      "figi": "FLOAT1",
+      "secid": "RU000A102FLT",
+      "name": "Флоатер RUONIA+",
+      "kind": "floater",
+      "currency": "RUB",
+      "face": 1000,
+      "coupon_type": "float",
+      "floater": true,
+      "inflation_linked": false,
+      "amortizing": false,
+      "qualified_only": false,
+      "risk_level": "medium",
+      "annual_coupon": 165.0,
+      "spread": 0.006,
+      "base_rate_name": "RUONIA",
+      "dirty_price": 1002.0,
+      "clean_price": 1000.0,
+      "aci": 2.0,
+      "qty_demo": 8,
+      "maturity": "2028-10-13",
+      "offer_date": null,
+      "next_reset": "2026-11-13",
+      "next_event": "2026-11-13 reset",
+      "source": "tinvest",
+      "cashflows": [
+        {"on_date": "2026-11-13", "amount_per_bond": 13.75, "type": "coupon", "status": "known", "source": "tinvest"},
+        {"on_date": "2027-02-13", "amount_per_bond": 41.25, "type": "coupon", "status": "estimate", "source": "ruonia+spread"},
+        {"on_date": "2027-05-13", "amount_per_bond": 41.25, "type": "coupon", "status": "estimate", "source": "ruonia+spread"},
+        {"on_date": "2027-08-13", "amount_per_bond": 41.25, "type": "coupon", "status": "estimate", "source": "ruonia+spread"},
+        {"on_date": "2027-11-13", "amount_per_bond": 41.25, "type": "coupon", "status": "estimate", "source": "ruonia+spread"},
+        {"on_date": "2028-02-13", "amount_per_bond": 41.25, "type": "coupon", "status": "estimate", "source": "ruonia+spread"},
+        {"on_date": "2028-05-13", "amount_per_bond": 41.25, "type": "coupon", "status": "estimate", "source": "ruonia+spread"},
+        {"on_date": "2028-08-13", "amount_per_bond": 41.25, "type": "coupon", "status": "estimate", "source": "ruonia+spread"},
+        {"on_date": "2028-10-13", "amount_per_bond": 1041.25, "type": "coupon_plus_redemption", "status": "estimate", "source": "ruonia+spread"}
+      ]
+    }
+  ]
+}

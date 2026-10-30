@@ -1,0 +1,11 @@
+{
+  "iss_moex": "internal_only",
+  "tinvest_user": "owner_only",
+  "tinvest_platform": "forbidden",
+  "finam": "awaiting",
+  "binance_public": "beta",
+  "bybit_public": "beta",
+  "fmp": "awaiting",
+  "polygon": "awaiting",
+  "yahoo": "internal_only"
+}

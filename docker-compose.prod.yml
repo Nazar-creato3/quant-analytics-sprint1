@@ -1,0 +1,580 @@
+version: "3.9"
+
+# =============================================================================
+# docker-compose.prod.yml — production overlay for the Quant Analytics platform
+#
+# Usage (from repo root, on the VPS):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# This overlay:
+#   * pins production commands (uvicorn workers, tuned Postgres/Redis)
+#   * runs Celery workers covering ALL queues (pipeline, ingestion, execution,
+#     backtest, celery/default) plus celery-beat for scheduled fetches
+#   * adds a Caddy reverse proxy with automatic Let's Encrypt TLS
+#   * removes dev bind-mounts and hot-reload; uses named volumes only
+#   * sets restart: unless-stopped everywhere so the stack survives reboots
+#     but still respects a manual `docker compose stop`
+#
+# Backend image is built from backend/Dockerfile which pins python:3.11-slim.
+# =============================================================================
+
+volumes:
+  caddy_data:
+  caddy_config:
+  eurostat_data:
+  mlflow_exports:
+  feature_store_data:
+  mlflow_data:
+  vault_data:
+
+services:
+
+  vault:
+    restart: unless-stopped
+    ports: !reset []
+
+  # ── Backend API (uvicorn, prod) ────────────────────────────────────────────
+  backend:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - sh
+      - -c
+      - alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --forwarded-allow-ips='172.16.0.0/12,127.0.0.1,10.0.0.0/8,192.168.0.0/16' --http h11 --no-access-log
+    environment:
+      # File-backed state and price history shared by API and workers (./data).
+      QA_STATE_PERSIST: "1"
+      PRICE_HISTORY: "1"
+      APP_ENV: production
+      # Integrations Hub — third_party clones + sidecar URLs on Docker host
+      APEX_THIRD_PARTY_ROOT: /third_party
+      CAP_BACKEND_URL: ${CAP_BACKEND_URL:-http://host.docker.internal:18000}
+      OPENTAO_URL: ${OPENTAO_URL:-http://host.docker.internal:3000}
+      CELEBRUM_URL: ${CELEBRUM_URL:-http://host.docker.internal:8080}
+      CRYPTO_PULSE_URL: ${CRYPTO_PULSE_URL:-http://host.docker.internal:5173}
+      FREQTRADE_URL: ${FREQTRADE_URL:-http://host.docker.internal:8081}
+      FREQTRADE_SIGNAL_PATH: ${FREQTRADE_SIGNAL_PATH:-/app/data/freqtrade_signal.json}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      MANEUVER_DEBATE_ENABLED: ${MANEUVER_DEBATE_ENABLED:-1}
+      NUMBA_CACHE_DIR: /tmp/numba_cache
+      MPLCONFIGDIR: /tmp/matplotlib
+      DEBUG: "false"
+      PASSWORD_DEV_PLAIN: "false"
+      CSRF_PROTECTION_ENABLED: "true"
+      SECRETS_BACKEND: ${SECRETS_BACKEND:-vault}
+      VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+      VAULT_TOKEN: ${VAULT_TOKEN:-}
+      VAULT_SECRET_PATH: ${VAULT_SECRET_PATH:-secret/data/apex-intel/trading}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-${DOMAIN:-quantanalyticsclub.ru}}
+      WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Quant Analytics}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-https://${DOMAIN:-quantanalyticsclub.ru}}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      FRED_CANADA_API_KEY: ${FRED_CANADA_API_KEY:-}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      FMP_API_KEY: ${FMP_API_KEY:-}
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+      ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY:-}
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
+      TIINGO_API_KEY: ${TIINGO_API_KEY:-}
+      MARKETSTACK_API_KEY: ${MARKETSTACK_API_KEY:-}
+      TWELVEDATA_API_KEY: ${TWELVEDATA_API_KEY:-}
+      TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-${TWELVEDATA_API_KEY:-}}
+      NEWS_API_KEY: ${NEWS_API_KEY:-}
+      GNEWS_API_KEY: ${GNEWS_API_KEY:-}
+      NEWSCATCHER_API_KEY: ${NEWSCATCHER_API_KEY:-}
+      FINIMPULSE_API_KEY: ${FINIMPULSE_API_KEY:-}
+      FINIMPULSE_SANDBOX_KEY: ${FINIMPULSE_SANDBOX_KEY:-}
+      APIBRICKS_API_KEY: ${APIBRICKS_API_KEY:-}
+      EIA_API_KEY: ${EIA_API_KEY:-}
+      BENZINGA_API_KEY: ${BENZINGA_API_KEY:-}
+      QUIVER_API_KEY: ${QUIVER_API_KEY:-}
+      BRAIN_API_KEY: ${BRAIN_API_KEY:-}
+      BRAIN_API_BASE_URL: ${BRAIN_API_BASE_URL:-}
+      MORNINGSTAR_API_KEY: ${MORNINGSTAR_API_KEY:-}
+      MORNINGSTAR_API_BASE_URL: ${MORNINGSTAR_API_BASE_URL:-}
+      QUANTCONNECT_DATA_DIR: ${QUANTCONNECT_DATA_DIR:-/app/data/qc_lean}
+      ENABLE_OPENBB_SOURCE: ${ENABLE_OPENBB_SOURCE:-true}
+      RAPIDAPI_KEY: ${RAPIDAPI_KEY:-}
+      INVESTING_RAPIDAPI_HOST: ${INVESTING_RAPIDAPI_HOST:-investing-com-ultimate-api.p.rapidapi.com}
+      INVESTING_RAPIDAPI_ENABLED: ${INVESTING_RAPIDAPI_ENABLED:-true}
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+      BINANCE_BASE_URL: ${BINANCE_BASE_URL:-https://api.binance.com}
+      MOEX_API_TOKEN: ${MOEX_API_TOKEN:-}
+      MOEX_USERNAME: ${MOEX_USERNAME:-}
+      MOEX_PASSWORD: ${MOEX_PASSWORD:-}
+      XFINLINK_API_KEY: ${XFINLINK_API_KEY:-}
+      DATABENTO_API_KEY: ${DATABENTO_API_KEY:-}
+      TINKOFF_API_TOKEN: ${TINKOFF_API_TOKEN:-}
+      # Selective Frankfurt proxy for foreign APIs only (code uses FOREIGN_HTTPS_PROXY).
+      # NO_PROXY keeps MOEX/Binance/CBR/local services off the proxy when tools honor env.
+      FOREIGN_HTTPS_PROXY: ${FOREIGN_HTTPS_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-${FOREIGN_HTTPS_PROXY:-}}
+      HTTP_PROXY: ${HTTP_PROXY:-${HTTPS_PROXY:-${FOREIGN_HTTPS_PROXY:-}}}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,host.docker.internal,postgres,redis,backend,vault,mlflow,flower,*.moex.com,iss.moex.com,api.binance.com,data-api.binance.vision,stream.binance.com,*.binance.com,*.cbr.ru,cbr.ru,*.ru,moex.com,binance.com,binance.vision,.ru}
+      EIA_BULK_PATH: ${EIA_BULK_PATH:-/app/market_bulk_data}
+      WORLD_BANK_BULK_PATH: ${WORLD_BANK_BULK_PATH:-/app/market_bulk_data}
+      EUROSTAT_DATA_DIR: ${EUROSTAT_DATA_DIR:-/app/market_bulk_data/ЕВРОСТАТ}
+      EUROSTAT_STORE_DIR: ${EUROSTAT_STORE_DIR:-/app/data/eurostat}
+      STOOQ_BULK_DIR: ${STOOQ_BULK_DIR:-/app/data/stooq}
+      STOOQ_BULK_PACKAGES: ${STOOQ_BULK_PACKAGES:-d_us_txt.zip,d_world_txt.zip}
+      STOOQ_API_KEY: ${STOOQ_API_KEY:-}
+      STOOQ_COOKIE: ${STOOQ_COOKIE:-}
+      FRED_BULK_DIR: ${FRED_BULK_DIR:-/app/data/fred}
+      EQUITY_EOD_DIR: ${EQUITY_EOD_DIR:-/app/data/equity_eod}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-unisender}
+      EMAIL_PRIMARY_PROVIDER: ${EMAIL_PRIMARY_PROVIDER:-unisender}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@${DOMAIN:-quantanalyticsclub.ru}}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Quant Analytics}
+      EMAIL_VERIFICATION_BASE_URL: ${EMAIL_VERIFICATION_BASE_URL:-https://${DOMAIN:-quantanalyticsclub.ru}}
+      UNISENDER_API_KEY: ${UNISENDER_API_KEY:-}
+      UNISENDER_API_URL: ${UNISENDER_API_URL:-https://goapi.unisender.ru/ru/transactional/api/v1}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      TWENTY_API_URL: ${TWENTY_API_URL:-}
+      TWENTY_API_KEY: ${TWENTY_API_KEY:-}
+      TWENTY_WORKSPACE_ID: ${TWENTY_WORKSPACE_ID:-}
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-http://mlflow:5000}
+      MLFLOW_EXPORT_DIR: /app/data/mlflow_exports
+      FEAST_STORE_DIR: /app/data/feature_store
+    restart: unless-stopped
+    # Drop the dev source bind-mount; run the baked image code only.
+    volumes: !override
+      # Repo-root texts the app reads at runtime (legal texts, UI copy, golden data);
+      # the image is built from ./backend so they are not inside it.
+      - ./legal:/legal:ro
+      - ./docs:/docs:ro
+      - model_data:/app/models
+      - eurostat_data:/app/data/eurostat
+      - mlflow_exports:/app/data/mlflow_exports
+      - feature_store_data:/app/data/feature_store
+      - ./backend/market_bulk_data:/app/market_bulk_data:ro
+      - ./third_party:/third_party:ro
+      # Host bulk stores: prefer ./data, overlay backend/data/* so ingest into either path works.
+      - ./data:/app/data
+      - ./backend/data/stooq:/app/data/stooq
+      - ./backend/data/equity_eod:/app/data/equity_eod
+      - ./backend/data/fred:/app/data/fred
+    # Do not publish the API port publicly — Caddy proxies /api/* internally.
+    ports: !reset []
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          # 1536M was hit (OOMKilled 28.10, four uvicorn workers + PyTorch); host has 8 GB.
+          memory: 2560M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+  # ── Celery worker — pipeline (market analysis only) ───────────────────────
+  celery-pipeline:
+    command: >
+      celery -A app.tasks.celery_app.celery_app worker
+        --loglevel=warning
+        --queues=pipeline
+        --concurrency=2
+        --max-tasks-per-child=3
+        --hostname=pipeline@%h
+        --without-heartbeat
+        --without-gossip
+    restart: unless-stopped
+    environment:
+      # File-backed state and price history shared by API and workers (./data).
+      QA_STATE_PERSIST: "1"
+      PRICE_HISTORY: "1"
+      HEALTH_CHECK_BASE_URL: http://backend:8000
+      HEALTH_CHECK_WS_URL: ws://backend:8000/api/v1/ws/terminal
+      HEALTH_CHECK_CHAT_TOKEN: ${HEALTH_CHECK_CHAT_TOKEN:-}
+      TEST_USER_A_EMAIL: ${TEST_USER_A_EMAIL:-}
+      TEST_USER_A_PASSWORD: ${TEST_USER_A_PASSWORD:-}
+      TEST_USER_A_TOKEN: ${TEST_USER_A_TOKEN:-}
+      TEST_USER_B_EMAIL: ${TEST_USER_B_EMAIL:-}
+      TEST_USER_B_PASSWORD: ${TEST_USER_B_PASSWORD:-}
+      TEST_USER_B_TOKEN: ${TEST_USER_B_TOKEN:-}
+      PASSWORD_DEV_PLAIN: "false"
+      CSRF_PROTECTION_ENABLED: "true"
+      MANEUVER_DEBATE_ENABLED: "false"
+      NUMBA_CACHE_DIR: /tmp/numba_cache
+      MPLCONFIGDIR: /tmp/matplotlib
+      PIPELINE_LLM_DEBATE_ENABLED: "false"
+      PIPELINE_SKIP_SHAP: "false"
+      PIPELINE_SKIP_HMM_REGIME: "false"
+      PIPELINE_NEWS_FAST: "false"
+      PIPELINE_SKIP_MACRO_REFRESH: "false"
+      PIPELINE_MACRO_REFRESH_TTL_MINUTES: "30"
+      PIPELINE_MAX_TICKERS: "0"
+      PIPELINE_BAR_LOOKBACK_DAYS: "180"
+      FINBERT_ENABLED: "true"
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-unisender}
+      EMAIL_PRIMARY_PROVIDER: ${EMAIL_PRIMARY_PROVIDER:-unisender}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@${DOMAIN:-quantanalyticsclub.ru}}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Quant Analytics}
+      UNISENDER_API_KEY: ${UNISENDER_API_KEY:-}
+      UNISENDER_API_URL: ${UNISENDER_API_URL:-https://goapi.unisender.ru/ru/transactional/api/v1}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      FRED_CANADA_API_KEY: ${FRED_CANADA_API_KEY:-}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      FMP_API_KEY: ${FMP_API_KEY:-}
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+      ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY:-}
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
+      TIINGO_API_KEY: ${TIINGO_API_KEY:-}
+      MARKETSTACK_API_KEY: ${MARKETSTACK_API_KEY:-}
+      TWELVEDATA_API_KEY: ${TWELVEDATA_API_KEY:-}
+      TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-${TWELVEDATA_API_KEY:-}}
+      NEWS_API_KEY: ${NEWS_API_KEY:-}
+      GNEWS_API_KEY: ${GNEWS_API_KEY:-}
+      NEWSCATCHER_API_KEY: ${NEWSCATCHER_API_KEY:-}
+      FINIMPULSE_API_KEY: ${FINIMPULSE_API_KEY:-}
+      FINIMPULSE_SANDBOX_KEY: ${FINIMPULSE_SANDBOX_KEY:-}
+      APIBRICKS_API_KEY: ${APIBRICKS_API_KEY:-}
+      EIA_API_KEY: ${EIA_API_KEY:-}
+      BENZINGA_API_KEY: ${BENZINGA_API_KEY:-}
+      QUIVER_API_KEY: ${QUIVER_API_KEY:-}
+      BRAIN_API_KEY: ${BRAIN_API_KEY:-}
+      BRAIN_API_BASE_URL: ${BRAIN_API_BASE_URL:-}
+      MORNINGSTAR_API_KEY: ${MORNINGSTAR_API_KEY:-}
+      MORNINGSTAR_API_BASE_URL: ${MORNINGSTAR_API_BASE_URL:-}
+      QUANTCONNECT_DATA_DIR: ${QUANTCONNECT_DATA_DIR:-/app/data/qc_lean}
+      ENABLE_OPENBB_SOURCE: ${ENABLE_OPENBB_SOURCE:-true}
+      RAPIDAPI_KEY: ${RAPIDAPI_KEY:-}
+      INVESTING_RAPIDAPI_HOST: ${INVESTING_RAPIDAPI_HOST:-investing-com-ultimate-api.p.rapidapi.com}
+      INVESTING_RAPIDAPI_ENABLED: ${INVESTING_RAPIDAPI_ENABLED:-true}
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+      BINANCE_BASE_URL: ${BINANCE_BASE_URL:-https://api.binance.com}
+      MOEX_API_TOKEN: ${MOEX_API_TOKEN:-}
+      MOEX_USERNAME: ${MOEX_USERNAME:-}
+      MOEX_PASSWORD: ${MOEX_PASSWORD:-}
+      XFINLINK_API_KEY: ${XFINLINK_API_KEY:-}
+      DATABENTO_API_KEY: ${DATABENTO_API_KEY:-}
+      TINKOFF_API_TOKEN: ${TINKOFF_API_TOKEN:-}
+      # Selective Frankfurt proxy for foreign APIs only (code uses FOREIGN_HTTPS_PROXY).
+      # NO_PROXY keeps MOEX/Binance/CBR/local services off the proxy when tools honor env.
+      FOREIGN_HTTPS_PROXY: ${FOREIGN_HTTPS_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-${FOREIGN_HTTPS_PROXY:-}}
+      HTTP_PROXY: ${HTTP_PROXY:-${HTTPS_PROXY:-${FOREIGN_HTTPS_PROXY:-}}}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,host.docker.internal,postgres,redis,backend,vault,mlflow,flower,*.moex.com,iss.moex.com,api.binance.com,data-api.binance.vision,stream.binance.com,*.binance.com,*.cbr.ru,cbr.ru,*.ru,moex.com,binance.com,binance.vision,.ru}
+      EIA_BULK_PATH: ${EIA_BULK_PATH:-/app/market_bulk_data}
+      WORLD_BANK_BULK_PATH: ${WORLD_BANK_BULK_PATH:-/app/market_bulk_data}
+      EUROSTAT_DATA_DIR: ${EUROSTAT_DATA_DIR:-/app/market_bulk_data/ЕВРОСТАТ}
+      EUROSTAT_STORE_DIR: ${EUROSTAT_STORE_DIR:-/app/data/eurostat}
+      STOOQ_BULK_DIR: ${STOOQ_BULK_DIR:-/app/data/stooq}
+      STOOQ_BULK_PACKAGES: ${STOOQ_BULK_PACKAGES:-d_us_txt.zip,d_world_txt.zip}
+      STOOQ_API_KEY: ${STOOQ_API_KEY:-}
+      STOOQ_COOKIE: ${STOOQ_COOKIE:-}
+      FRED_BULK_DIR: ${FRED_BULK_DIR:-/app/data/fred}
+      EQUITY_EOD_DIR: ${EQUITY_EOD_DIR:-/app/data/equity_eod}
+      TWENTY_API_URL: ${TWENTY_API_URL:-}
+      TWENTY_API_KEY: ${TWENTY_API_KEY:-}
+      TWENTY_WORKSPACE_ID: ${TWENTY_WORKSPACE_ID:-}
+    healthcheck:
+      disable: true
+    volumes: !override
+      # Repo-root texts the app reads at runtime (legal texts, UI copy, golden data);
+      # the image is built from ./backend so they are not inside it.
+      - ./legal:/legal:ro
+      - ./docs:/docs:ro
+      - model_data:/app/models
+      - eurostat_data:/app/data/eurostat
+      - ./backend/market_bulk_data:/app/market_bulk_data:ro
+      - ./data:/app/data
+      - ./backend/data/stooq:/app/data/stooq
+      - ./backend/data/equity_eod:/app/data/equity_eod
+      - ./backend/data/fred:/app/data/fred
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 3072M
+        reservations:
+          cpus: "0.75"
+          memory: 1024M
+
+  # ── Celery worker — ingestion + periodic ticks (keeps pipeline queue free) ──
+  celery-ingestion:
+    command: >
+      celery -A app.tasks.celery_app.celery_app worker
+        --loglevel=warning
+        --queues=ingestion,celery
+        --concurrency=2
+        --hostname=ingestion@%h
+        --without-heartbeat
+        --without-gossip
+    restart: unless-stopped
+    environment:
+      # File-backed state and price history shared by API and workers (./data).
+      QA_STATE_PERSIST: "1"
+      PRICE_HISTORY: "1"
+      PASSWORD_DEV_PLAIN: "false"
+      CSRF_PROTECTION_ENABLED: "true"
+      NUMBA_CACHE_DIR: /tmp/numba_cache
+      FINBERT_ENABLED: "true"
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      # Price history and screener sync run on this worker: same MOEX passport as the API.
+      MOEX_API_TOKEN: ${MOEX_API_TOKEN:-}
+      MOEX_USERNAME: ${MOEX_USERNAME:-}
+      MOEX_PASSWORD: ${MOEX_PASSWORD:-}
+      NEWS_API_KEY: ${NEWS_API_KEY:-}
+      RAPIDAPI_KEY: ${RAPIDAPI_KEY:-}
+      INVESTING_RAPIDAPI_HOST: ${INVESTING_RAPIDAPI_HOST:-investing-com-ultimate-api.p.rapidapi.com}
+      INVESTING_RAPIDAPI_ENABLED: ${INVESTING_RAPIDAPI_ENABLED:-true}
+      FOREIGN_HTTPS_PROXY: ${FOREIGN_HTTPS_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-${FOREIGN_HTTPS_PROXY:-}}
+      HTTP_PROXY: ${HTTP_PROXY:-${HTTPS_PROXY:-${FOREIGN_HTTPS_PROXY:-}}}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,host.docker.internal,postgres,redis,backend,vault,mlflow,flower,*.moex.com,iss.moex.com,api.binance.com,data-api.binance.vision,stream.binance.com,*.binance.com,*.cbr.ru,cbr.ru,*.ru,moex.com,binance.com,binance.vision,.ru}
+      STOOQ_BULK_DIR: ${STOOQ_BULK_DIR:-/app/data/stooq}
+      STOOQ_BULK_PACKAGES: ${STOOQ_BULK_PACKAGES:-d_us_txt.zip,d_world_txt.zip}
+      STOOQ_API_KEY: ${STOOQ_API_KEY:-}
+      STOOQ_COOKIE: ${STOOQ_COOKIE:-}
+      FRED_BULK_DIR: ${FRED_BULK_DIR:-/app/data/fred}
+      EQUITY_EOD_DIR: ${EQUITY_EOD_DIR:-/app/data/equity_eod}
+    healthcheck:
+      disable: true
+    volumes: !override
+      # Repo-root texts the app reads at runtime (legal texts, UI copy, golden data);
+      # the image is built from ./backend so they are not inside it.
+      - ./legal:/legal:ro
+      - ./docs:/docs:ro
+      - model_data:/app/models
+      - ./backend/market_bulk_data:/app/market_bulk_data:ro
+      - ./data:/app/data
+      - ./backend/data/stooq:/app/data/stooq
+      - ./backend/data/equity_eod:/app/data/equity_eod
+      - ./backend/data/fred:/app/data/fred
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 2048M
+        reservations:
+          cpus: "0.5"
+          memory: 768M
+
+  # ── Celery worker — execution + backtest ───────────────────────────────────
+  celery-execution:
+    command: >
+      celery -A app.tasks.celery_app.celery_app worker
+        --loglevel=warning
+        --queues=execution,backtest
+        --concurrency=2
+        --hostname=execution@%h
+        --without-heartbeat
+    restart: unless-stopped
+    environment:
+      PASSWORD_DEV_PLAIN: "false"
+      CSRF_PROTECTION_ENABLED: "true"
+      MANEUVER_DEBATE_ENABLED: "false"
+    healthcheck:
+      disable: true
+    volumes: !override
+      # Repo-root texts the app reads at runtime (legal texts, UI copy, golden data);
+      # the image is built from ./backend so they are not inside it.
+      - ./legal:/legal:ro
+      - ./docs:/docs:ro
+      - model_data:/app/models
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+
+  # ── Celery beat (scheduled news / market / macro fetches) ──────────────────
+  celery-beat:
+    restart: unless-stopped
+    environment:
+      PASSWORD_DEV_PLAIN: "false"
+      CSRF_PROTECTION_ENABLED: "true"
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      FRED_CANADA_API_KEY: ${FRED_CANADA_API_KEY:-}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      FMP_API_KEY: ${FMP_API_KEY:-}
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+      ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY:-}
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
+      TIINGO_API_KEY: ${TIINGO_API_KEY:-}
+      MARKETSTACK_API_KEY: ${MARKETSTACK_API_KEY:-}
+      TWELVEDATA_API_KEY: ${TWELVEDATA_API_KEY:-}
+      TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-${TWELVEDATA_API_KEY:-}}
+      NEWS_API_KEY: ${NEWS_API_KEY:-}
+      GNEWS_API_KEY: ${GNEWS_API_KEY:-}
+      NEWSCATCHER_API_KEY: ${NEWSCATCHER_API_KEY:-}
+      FINIMPULSE_API_KEY: ${FINIMPULSE_API_KEY:-}
+      FINIMPULSE_SANDBOX_KEY: ${FINIMPULSE_SANDBOX_KEY:-}
+      APIBRICKS_API_KEY: ${APIBRICKS_API_KEY:-}
+      EIA_API_KEY: ${EIA_API_KEY:-}
+      BENZINGA_API_KEY: ${BENZINGA_API_KEY:-}
+      QUIVER_API_KEY: ${QUIVER_API_KEY:-}
+      BRAIN_API_KEY: ${BRAIN_API_KEY:-}
+      BRAIN_API_BASE_URL: ${BRAIN_API_BASE_URL:-}
+      MORNINGSTAR_API_KEY: ${MORNINGSTAR_API_KEY:-}
+      MORNINGSTAR_API_BASE_URL: ${MORNINGSTAR_API_BASE_URL:-}
+      QUANTCONNECT_DATA_DIR: ${QUANTCONNECT_DATA_DIR:-/app/data/qc_lean}
+      ENABLE_OPENBB_SOURCE: ${ENABLE_OPENBB_SOURCE:-true}
+      RAPIDAPI_KEY: ${RAPIDAPI_KEY:-}
+      INVESTING_RAPIDAPI_HOST: ${INVESTING_RAPIDAPI_HOST:-investing-com-ultimate-api.p.rapidapi.com}
+      INVESTING_RAPIDAPI_ENABLED: ${INVESTING_RAPIDAPI_ENABLED:-true}
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+      BINANCE_BASE_URL: ${BINANCE_BASE_URL:-https://api.binance.com}
+      MOEX_API_TOKEN: ${MOEX_API_TOKEN:-}
+      MOEX_USERNAME: ${MOEX_USERNAME:-}
+      MOEX_PASSWORD: ${MOEX_PASSWORD:-}
+      XFINLINK_API_KEY: ${XFINLINK_API_KEY:-}
+      DATABENTO_API_KEY: ${DATABENTO_API_KEY:-}
+      TINKOFF_API_TOKEN: ${TINKOFF_API_TOKEN:-}
+      # Selective Frankfurt proxy for foreign APIs only (code uses FOREIGN_HTTPS_PROXY).
+      # NO_PROXY keeps MOEX/Binance/CBR/local services off the proxy when tools honor env.
+      FOREIGN_HTTPS_PROXY: ${FOREIGN_HTTPS_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-${FOREIGN_HTTPS_PROXY:-}}
+      HTTP_PROXY: ${HTTP_PROXY:-${HTTPS_PROXY:-${FOREIGN_HTTPS_PROXY:-}}}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,host.docker.internal,postgres,redis,backend,vault,mlflow,flower,*.moex.com,iss.moex.com,api.binance.com,data-api.binance.vision,stream.binance.com,*.binance.com,*.cbr.ru,cbr.ru,*.ru,moex.com,binance.com,binance.vision,.ru}
+      EIA_BULK_PATH: ${EIA_BULK_PATH:-/app/market_bulk_data}
+      WORLD_BANK_BULK_PATH: ${WORLD_BANK_BULK_PATH:-/app/market_bulk_data}
+      EUROSTAT_DATA_DIR: ${EUROSTAT_DATA_DIR:-/app/market_bulk_data/ЕВРОСТАТ}
+      EUROSTAT_STORE_DIR: ${EUROSTAT_STORE_DIR:-/app/data/eurostat}
+      STOOQ_BULK_DIR: ${STOOQ_BULK_DIR:-/app/data/stooq}
+      STOOQ_BULK_PACKAGES: ${STOOQ_BULK_PACKAGES:-d_us_txt.zip,d_world_txt.zip}
+      STOOQ_API_KEY: ${STOOQ_API_KEY:-}
+      STOOQ_COOKIE: ${STOOQ_COOKIE:-}
+      FRED_BULK_DIR: ${FRED_BULK_DIR:-/app/data/fred}
+      EQUITY_EOD_DIR: ${EQUITY_EOD_DIR:-/app/data/equity_eod}
+    healthcheck:
+      disable: true
+    volumes: !override
+      # Repo-root texts the app reads at runtime (legal texts, UI copy, golden data);
+      # the image is built from ./backend so they are not inside it.
+      - ./legal:/legal:ro
+      - ./docs:/docs:ro
+      - ./backend/market_bulk_data:/app/market_bulk_data:ro
+
+  # ── Flower (Celery monitoring) — internal only, proxied via Caddy ──────────
+  # Production: set FLOWER_PASSWORD in .env (do not leave the flowerpass default).
+  flower:
+    restart: unless-stopped
+    environment:
+      FLOWER_PASSWORD: ${FLOWER_PASSWORD:-flowerpass}
+      FLOWER_BASIC_AUTH: admin:${FLOWER_PASSWORD:-flowerpass}
+      APP_ENV: production
+      CSRF_PROTECTION_ENABLED: "true"
+    ports: !reset []
+    # Backend image HEALTHCHECK probes :8000; Flower listens on :5555 — override here.
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'curl -sf -u "admin:$${FLOWER_PASSWORD:-flowerpass}" http://localhost:5555/ || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+  # ── PostgreSQL (tuned, internal only) ──────────────────────────────────────
+  postgres:
+    restart: unless-stopped
+    command: >
+      postgres
+        -c max_connections=200
+        -c shared_buffers=256MB
+        -c effective_cache_size=1GB
+        -c work_mem=16MB
+        -c maintenance_work_mem=64MB
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c wal_buffers=16MB
+        -c checkpoint_completion_target=0.9
+        -c default_statistics_target=100
+        -c log_min_duration_statement=1000
+    # Keep DB private to the docker network in production.
+    ports: !reset []
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+
+  # ── Redis (persistence enabled, internal only, OOM-hardened) ───────────────
+  redis:
+    restart: unless-stopped
+    command: >
+      redis-server
+        --maxmemory 384mb
+        --maxmemory-policy allkeys-lru
+        --save 300 100
+        --appendonly yes
+        --appendfsync everysec
+        --tcp-keepalive 60
+        --timeout 0
+    ports: !reset []
+    sysctls:
+      net.core.somaxconn: 1024
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          memory: 128M
+  # ── Frontend (Next.js standalone) ──────────────────────────────────────────
+  # MLflow has no authentication. Docker-published ports bypass ufw, so 5050 was
+  # reachable from the internet. Keep it on the internal network only (backend
+  # reaches it as http://mlflow:5000); for the UI use an SSH tunnel.
+  mlflow:
+    ports: !reset []
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      provenance: false
+      args:
+        # Empty = same-origin /api/* (recommended). Set PUBLIC_API_URL for cross-origin.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-${PUBLIC_API_URL:-}}
+    environment:
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Quant Analytics}
+    restart: unless-stopped
+    ports: !reset []
+
+  # ── Caddy reverse proxy + automatic Let's Encrypt TLS ──────────────────────
+  # Recommended production edge. Terminates TLS, proxies:
+  #   /api/*  -> backend:8000   (REST + websockets)
+  #   /*      -> frontend:3000  (Next.js, incl. the /ops/pilot page)
+  caddy:
+    image: caddy:2-alpine
+    container_name: apex-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./infrastructure/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - apex-net
+    depends_on:
+      - backend
+      - frontend
+
+  # ── Nginx: disabled by default in favour of Caddy. ─────────────────────────
+  # If you prefer nginx + certbot, keep it behind the `nginx` profile and start
+  # with `--profile nginx` while removing the caddy service. See DEPLOY doc.
+  nginx:
+    profiles:
+      - nginx
+    restart: unless-stopped
+

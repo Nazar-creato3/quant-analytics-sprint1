@@ -1,0 +1,5 @@
+fastapi>=0.142.2
+uvicorn[standard]>=0.32.0
+openbb>=4.0.0
+openbb-sec>=1.0.0
+openbb-finra>=1.0.0

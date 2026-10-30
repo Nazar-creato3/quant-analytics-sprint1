@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<broker_report broker="tbank" period="demo">
+  <item ticker="SBER" qty="10" amount="2800" date="2026-01-15"/>
+  <item ticker="GAZP" qty="20" amount="2600" date="2026-01-16"/>
+  <item ticker="LKOH" qty="2" amount="14000" date="2026-01-17"/>
+</broker_report>

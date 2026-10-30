@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "id": "2026-10-07-maneuver-stack",
+      "at": "2026-10-07",
+      "note": "Смена логики этих модулей требует новой записи. Старая запись не правится.",
+      "versions": {
+        "act_desk": "act_desk.v1",
+        "investment_profile": "investment_profile.v1",
+        "maneuver_control": "maneuver_control.v1",
+        "maneuver_history": "maneuver_history.v1",
+        "maneuvers": "maneuvers.v1",
+        "risk": "risk_engine.fhs.v1",
+        "stress": "stress_library.v1",
+        "target_portfolio": "target_portfolio.v1"
+      }
+    }
+  ]
+}

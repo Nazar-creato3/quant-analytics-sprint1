@@ -1,0 +1,20 @@
+{
+  "label": "e2e/demo",
+  "source": "e2e/fixtures/demo_market.json",
+  "not_a_live_quote": true,
+  "ccy": "RUB",
+  "note": "Synthetic bars and a two-name paper book for the qa-e2e stack. The source is this file. These numbers are not an exchange quote, a tariff, or a tax rate.",
+  "positions": [
+    {"ticker": "SBER", "qty": "80", "amount": "8000"},
+    {"ticker": "GAZP", "qty": "20", "amount": "2000"},
+    {"ticker": "OFZ26238", "qty": "10", "amount": "10000"},
+    {"ticker": "CORPAMORT", "qty": "5", "amount": "5050"},
+    {"ticker": "FLOAT1", "qty": "8", "amount": "8016"}
+  ],
+  "history": {
+    "SBER": [96, 97, 95, 98, 100, 99, 101, 100, 102, 98, 99, 100, 101, 97, 100, 103, 101, 99, 100, 98, 100, 102, 99, 100],
+    "GAZP": [104, 103, 101, 100, 99, 102, 98, 97, 99, 100, 96, 98, 101, 103, 100, 99, 97, 100, 102, 101, 99, 98, 100, 100],
+    "RGBITR": [600, 600.4, 600.8, 601.2, 601.6, 602, 602.4, 602.8, 603.2, 603.6, 604, 604.4, 604.8, 605.2, 605.6, 606, 606.4, 606.8, 607.2, 607.6, 608, 608.4, 608.8, 609.2],
+    "LQDT": [1000, 1000.1, 1000.2, 1000.3, 1000.4, 1000.5, 1000.6, 1000.7, 1000.8, 1000.9, 1001, 1001.1, 1001.2, 1001.3, 1001.4, 1001.5, 1001.6, 1001.7, 1001.8, 1001.9, 1002, 1002.1, 1002.2, 1002.3]
+  }
+}

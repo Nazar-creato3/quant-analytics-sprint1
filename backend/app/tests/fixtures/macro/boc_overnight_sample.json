@@ -1,0 +1,21 @@
+{
+  "terms": {
+    "url": "https://www.bankofcanada.ca/valet/observations/V39079/json"
+  },
+  "seriesDetail": {
+    "V39079": {
+      "label": "Target for the overnight rate",
+      "description": "Bank of Canada policy rate"
+    }
+  },
+  "observations": [
+    {
+      "d": "2025-01-15",
+      "V39079": {"v": "3.25"}
+    },
+    {
+      "d": "2025-03-12",
+      "V39079": {"v": "2.75"}
+    }
+  ]
+}

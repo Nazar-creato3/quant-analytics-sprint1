@@ -1,0 +1,23 @@
+# Public stand: automatic TLS + site-wide basic_auth.
+# Placeholders filled at deploy. Do not put hashes in git.
+quantanalyticsclub.ru {
+	encode zstd gzip
+
+	basic_auth {
+		__USER__ __HASH__
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

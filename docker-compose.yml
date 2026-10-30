@@ -1,0 +1,606 @@
+# ── Networks ───────────────────────────────────────────────────────────────────
+networks:
+  apex-net:
+    driver: bridge
+  # A1 profile onprem. internal=true: no default route off this bridge.
+  # enable_ip_masquerade=false: this bridge does not NAT to the host network.
+  # Not an air gap. This file sets no dns: resolver. Host firewall is still
+  # required when the daemon does not manage iptables.
+  onprem:
+    driver: bridge
+    internal: true
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+
+# ── Volumes ────────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data_pg18:
+  redis_data:
+  model_data:
+  prometheus_data:
+  grafana_data:
+  mlflow_data:
+  vault_data:
+  postgres_data_onprem:
+  redis_data_onprem:
+
+# ── Shared env ref ─────────────────────────────────────────────────────────────
+x-backend-env: &backend-env
+  APP_ENV: ${APP_ENV:-development}
+  DEBUG: ${DEBUG:-true}
+  # Required when APP_ENV=production (see Settings.validate_production_secret_key).
+  # Host .env must set false/true; prod overlay also sets these if compose files merge.
+  PASSWORD_DEV_PLAIN: ${PASSWORD_DEV_PLAIN:-false}
+  CSRF_PROTECTION_ENABLED: ${CSRF_PROTECTION_ENABLED:-false}
+  SECRET_KEY: ${SECRET_KEY:-dev-secret-change-in-prod}
+  APP_DB_USER: ${APP_DB_USER:-appuser}
+  APP_DB_PASSWORD: ${APP_DB_PASSWORD:-${POSTGRES_PASSWORD:-changeme}}
+  DATABASE_URL: postgresql+asyncpg://${APP_DB_USER:-appuser}:${APP_DB_PASSWORD:-${POSTGRES_PASSWORD:-changeme}}@postgres:5432/apex_intel
+  DATABASE_URL_SYNC: postgresql://${APP_DB_USER:-appuser}:${APP_DB_PASSWORD:-${POSTGRES_PASSWORD:-changeme}}@postgres:5432/apex_intel
+  MIGRATION_DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-apex}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/apex_intel
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-http://mlflow:5000}
+  MLFLOW_EXPORT_DIR: ${MLFLOW_EXPORT_DIR:-/app/data/mlflow_exports}
+  HF_HOME: ${HF_HOME:-/app/models/hf_cache}
+  HUGGINGFACE_HUB_CACHE: ${HUGGINGFACE_HUB_CACHE:-/app/models/hf_cache}
+  FEAST_STORE_DIR: ${FEAST_STORE_DIR:-/app/data/feature_store}
+  WHITELIST_EMAILS: ${WHITELIST_EMAILS:-admin@example.com}
+  OPEN_REGISTRATION: ${OPEN_REGISTRATION:-true}
+  DOMAIN: ${DOMAIN:-}
+  CORS_ORIGINS: ${CORS_ORIGINS:-}
+  MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER:-alpaca}
+  ALPACA_API_KEY: ${ALPACA_API_KEY:-}
+  ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY:-}
+  POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+  FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+  COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
+  TIINGO_API_KEY: ${TIINGO_API_KEY:-}
+  MARKETSTACK_API_KEY: ${MARKETSTACK_API_KEY:-}
+  TWELVEDATA_API_KEY: ${TWELVEDATA_API_KEY:-}
+  TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-${TWELVEDATA_API_KEY:-}}
+  NEWS_API_KEY: ${NEWS_API_KEY:-}
+  GNEWS_API_KEY: ${GNEWS_API_KEY:-}
+  RAPIDAPI_KEY: ${RAPIDAPI_KEY:-}
+  INVESTING_RAPIDAPI_HOST: ${INVESTING_RAPIDAPI_HOST:-investing-com-ultimate-api.p.rapidapi.com}
+  INVESTING_RAPIDAPI_ENABLED: ${INVESTING_RAPIDAPI_ENABLED:-true}
+  FRED_API_KEY: ${FRED_API_KEY:-}
+  FRED_CANADA_API_KEY: ${FRED_CANADA_API_KEY:-}
+  ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+  FMP_API_KEY: ${FMP_API_KEY:-}
+  XFINLINK_API_KEY: ${XFINLINK_API_KEY:-}
+  DATABENTO_API_KEY: ${DATABENTO_API_KEY:-}
+  NEWSCATCHER_API_KEY: ${NEWSCATCHER_API_KEY:-}
+  FINIMPULSE_API_KEY: ${FINIMPULSE_API_KEY:-}
+  FINIMPULSE_SANDBOX_KEY: ${FINIMPULSE_SANDBOX_KEY:-}
+  APIBRICKS_API_KEY: ${APIBRICKS_API_KEY:-}
+  EIA_API_KEY: ${EIA_API_KEY:-}
+  BENZINGA_API_KEY: ${BENZINGA_API_KEY:-}
+  QUIVER_API_KEY: ${QUIVER_API_KEY:-}
+  BRAIN_API_KEY: ${BRAIN_API_KEY:-}
+  BRAIN_API_BASE_URL: ${BRAIN_API_BASE_URL:-}
+  MORNINGSTAR_API_KEY: ${MORNINGSTAR_API_KEY:-}
+  MORNINGSTAR_API_BASE_URL: ${MORNINGSTAR_API_BASE_URL:-}
+  QUANTCONNECT_DATA_DIR: ${QUANTCONNECT_DATA_DIR:-/app/data/qc_lean}
+  ENABLE_OPENBB_SOURCE: ${ENABLE_OPENBB_SOURCE:-true}
+  OPENBB_SERVICE_URL: ${OPENBB_SERVICE_URL:-http://openbb-service:6900}
+  OPENBB_SERVICE_TIMEOUT_SECONDS: ${OPENBB_SERVICE_TIMEOUT_SECONDS:-8}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  AITUNNEL_API_KEY: ${AITUNNEL_API_KEY:-}
+  AITUNNEL_BASE_URL: ${AITUNNEL_BASE_URL:-https://api.aitunnel.ru/v1}
+  LLM_PROVIDER: ${LLM_PROVIDER:-aitunnel}
+  LLM_ONPREM: ${LLM_ONPREM:-false}
+  LLM_ONPREM_BASE_URL: ${LLM_ONPREM_BASE_URL:-}
+  LLM_ONPREM_API_KEY: ${LLM_ONPREM_API_KEY:-}
+  LLM_ENABLED: ${LLM_ENABLED:-false}
+  LLM_MODEL_CLIENT_CHAT: ${LLM_MODEL_CLIENT_CHAT:-kimi-k3}
+  LLM_MODEL_BATCH: ${LLM_MODEL_BATCH:-kimi-k3}
+  LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-25}
+  CHAT_DEBUG_FOOTERS: ${CHAT_DEBUG_FOOTERS:-false}
+  CHAT_SHOW_DISCLOSURE: ${CHAT_SHOW_DISCLOSURE:-false}
+  PAPER_TRADING_ENABLED: ${PAPER_TRADING_ENABLED:-true}
+  LIVE_TRADING_ENABLED: ${LIVE_TRADING_ENABLED:-false}
+  LIVE_TRADING_CONFIRMATION: ${LIVE_TRADING_CONFIRMATION:-}
+  # Hard limits inside the live executors (see services/broker/*_orders.py).
+  LIVE_MAX_ORDER_PCT_OF_EQUITY: ${LIVE_MAX_ORDER_PCT_OF_EQUITY:-10}
+  LIVE_MAX_ORDER_RUB: ${LIVE_MAX_ORDER_RUB:-0}
+  LIVE_MAX_ORDERS_PER_DAY: ${LIVE_MAX_ORDERS_PER_DAY:-20}
+  LIVE_ALLOW_SHORT: ${LIVE_ALLOW_SHORT:-false}
+  # Phone sign-in (149-FZ art. 10.6). Without these in the environment the
+  # code default (required, SMS stub) applied and nobody could sign in.
+  PHONE_SIGNIN_REQUIRED: ${PHONE_SIGNIN_REQUIRED:-true}
+  SMS_PROVIDER: ${SMS_PROVIDER:-stub}
+  SMSRU_API_KEY: ${SMSRU_API_KEY:-}
+  DEFAULT_PORTFOLIO_SIZE: ${DEFAULT_PORTFOLIO_SIZE:-100000}
+  MAX_RISK_PER_TRADE_PCT: ${MAX_RISK_PER_TRADE_PCT:-2.0}
+  DEFAULT_WATCHLIST: ${DEFAULT_WATCHLIST:-SBER,GAZP,LKOH,YDEX,ROSN,GMKN,PLZL,MOEX,IMOEX,AAPL,MSFT,GOOGL,AMZN,META,NVDA,TSLA,SPY,QQQ,JPM,V,BTC-USD}
+  MODEL_DIR: /app/models
+  BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+  BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+  BINANCE_BASE_URL: ${BINANCE_BASE_URL:-https://testnet.binance.vision}
+  FINAM_API_KEY: ${FINAM_API_KEY:-}
+  FINAM_TOKEN: ${FINAM_TOKEN:-}
+  FINAM_ACCOUNT_ID: ${FINAM_ACCOUNT_ID:-}
+  TINKOFF_API_TOKEN: ${TINKOFF_API_TOKEN:-}
+  TINKOFF_TOKEN: ${TINKOFF_TOKEN:-}
+  SECRETS_BACKEND: ${SECRETS_BACKEND:-env}
+  VAULT_ADDR: ${VAULT_ADDR:-http://vault:8200}
+  VAULT_TOKEN: ${VAULT_TOKEN:-}
+  VAULT_SECRET_PATH: ${VAULT_SECRET_PATH:-secret/data/apex-intel/trading}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+  TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:-}
+  HEALTH_CHECK_BASE_URL: ${HEALTH_CHECK_BASE_URL:-}
+  HEALTH_CHECK_WS_URL: ${HEALTH_CHECK_WS_URL:-}
+  HEALTH_CHECK_CHAT_TOKEN: ${HEALTH_CHECK_CHAT_TOKEN:-}
+  TEST_USER_A_EMAIL: ${TEST_USER_A_EMAIL:-}
+  TEST_USER_A_PASSWORD: ${TEST_USER_A_PASSWORD:-}
+  TEST_USER_A_TOKEN: ${TEST_USER_A_TOKEN:-}
+  TEST_USER_B_EMAIL: ${TEST_USER_B_EMAIL:-}
+  TEST_USER_B_PASSWORD: ${TEST_USER_B_PASSWORD:-}
+  TEST_USER_B_TOKEN: ${TEST_USER_B_TOKEN:-}
+  EMAIL_PROVIDER: ${EMAIL_PROVIDER:-stub}
+  EMAIL_PRIMARY_PROVIDER: ${EMAIL_PRIMARY_PROVIDER:-stub}
+  EMAIL_SECONDARY_PROVIDER: ${EMAIL_SECONDARY_PROVIDER:-}
+  EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@apex-intel.local}
+  EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Apex Intel}
+  EMAIL_VERIFICATION_BASE_URL: ${EMAIL_VERIFICATION_BASE_URL:-http://localhost:3000}
+  UNISENDER_API_KEY: ${UNISENDER_API_KEY:-}
+  UNISENDER_API_URL: ${UNISENDER_API_URL:-https://goapi.unisender.ru/ru/transactional/api/v1}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  TWENTY_API_URL: ${TWENTY_API_URL:-}
+  TWENTY_API_KEY: ${TWENTY_API_KEY:-}
+  TWENTY_WORKSPACE_ID: ${TWENTY_WORKSPACE_ID:-}
+
+services:
+
+  # ── PostgreSQL + TimescaleDB ───────────────────────────────────────────────
+  postgres:
+    image: timescale/timescaledb:2.30.2-pg18
+    container_name: apex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: apex_intel
+      POSTGRES_USER: apex
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      TIMESCALEDB_TELEMETRY: "off"
+    volumes:
+      # PG18 official image stores data under /var/lib/postgresql/18/docker.
+      # New volume name: do not reuse a PG15 postgres_data directory (pg_upgrade required).
+      - postgres_data_pg18:/var/lib/postgresql
+      - ./infrastructure/docker/init-timescale.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - apex-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U apex -d apex_intel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: apex-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - apex-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Backend API ───────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: apex-backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    volumes:
+      - model_data:/app/models
+      - ./backend:/app:delegated
+    ports:
+      - "8000:8000"
+    networks:
+      - apex-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Celery Worker — Pipeline (market analysis only) ─────────────────────────
+  celery-pipeline:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: apex-celery-pipeline
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    volumes:
+      - model_data:/app/models
+      - ./backend:/app:delegated
+    networks:
+      - apex-net
+    depends_on:
+      - postgres
+      - redis
+    command: >
+      celery -A app.tasks.celery_app.celery_app worker
+        --loglevel=info
+        --queues=pipeline
+        --concurrency=2
+        --hostname=pipeline@%h
+
+  # ── Celery Worker — Ingestion + periodic ticks ──────────────────────────────
+  celery-ingestion:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: apex-celery-ingestion
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    volumes:
+      - model_data:/app/models
+      - ./backend:/app:delegated
+    networks:
+      - apex-net
+    depends_on:
+      - postgres
+      - redis
+    command: >
+      celery -A app.tasks.celery_app.celery_app worker
+        --loglevel=info
+        --queues=ingestion,celery
+        --concurrency=2
+        --hostname=ingestion@%h
+
+  # ── Celery Worker — Execution ─────────────────────────────────────────────
+  celery-execution:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: apex-celery-exec
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    volumes:
+      - model_data:/app/models
+      - ./backend:/app:delegated
+    networks:
+      - apex-net
+    depends_on:
+      - postgres
+      - redis
+    command: >
+      celery -A app.tasks.celery_app.celery_app worker
+        --loglevel=info
+        --queues=execution,backtest
+        --concurrency=1
+        --hostname=execution@%h
+
+  # ── Celery Beat (scheduler) ────────────────────────────────────────────────
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: apex-celery-beat
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    volumes:
+      - ./backend:/app:delegated
+    networks:
+      - apex-net
+    depends_on:
+      - redis
+    command: >
+      celery -A app.tasks.celery_app.celery_app beat
+        --loglevel=info
+        --scheduler=celery.beat:PersistentScheduler
+
+  # ── Flower (Celery monitoring) ─────────────────────────────────────────────
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: apex-flower
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      FLOWER_PASSWORD: ${FLOWER_PASSWORD:-flowerpass}
+      FLOWER_BASIC_AUTH: admin:${FLOWER_PASSWORD:-flowerpass}
+    ports:
+      - "5555:5555"
+    networks:
+      - apex-net
+    depends_on:
+      - redis
+    command: >
+      celery -A app.tasks.celery_app.celery_app flower
+        --port=5555
+        --broker_api=redis://redis:6379/1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'curl -sf -u "admin:$${FLOWER_PASSWORD:-flowerpass}" http://localhost:5555/ || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+  # ── HashiCorp Vault (KV v2 for trading venue keys) ─────────────────────────
+  vault:
+    image: hashicorp/vault:1.17
+    container_name: apex-vault
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+      VAULT_API_ADDR: http://0.0.0.0:8200
+    volumes:
+      - vault_data:/vault/data
+      - ./infrastructure/vault/config.hcl:/vault/config/config.hcl:ro
+      - ./infrastructure/vault/docker-entrypoint.sh:/vault/scripts/docker-entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/vault/scripts/docker-entrypoint.sh"]
+    ports:
+      - "8200:8200"
+    networks:
+      - apex-net
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
+  # ── MLflow tracking UI (file/sqlite backend under named volume) ────────────
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.2
+    container_name: apex-mlflow
+    restart: unless-stopped
+    environment:
+      MLFLOW_BACKEND_STORE_URI: sqlite:////mlflow/mlflow.db
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: /mlflow/artifacts
+    volumes:
+      - mlflow_data:/mlflow
+    ports:
+      - "5050:5000"
+    networks:
+      - apex-net
+    command: >
+      mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri sqlite:////mlflow/mlflow.db
+        --default-artifact-root /mlflow/artifacts
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=5)\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Empty = same-origin /api/* via nginx/Caddy (recommended for production).
+        # Local dev: set NEXT_PUBLIC_API_URL=http://localhost:8000 in .env
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+    container_name: apex-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Quant Analytics}
+    networks:
+      - apex-net
+    depends_on:
+      - backend
+
+  # ── Nginx reverse proxy ───────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: apex-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infrastructure/nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - apex-net
+    depends_on:
+      - backend
+      - frontend
+    profiles:
+      - production
+
+  # ── Prometheus ────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: apex-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - apex-net
+    profiles:
+      - monitoring
+
+  # ── Grafana ───────────────────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector:0.111.0
+    container_name: apex-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./infrastructure/monitoring/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4318:4318"
+    mem_limit: 256m
+    networks:
+      - apex-net
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: apex-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-adminpass}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./infrastructure/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3001:3000"
+    networks:
+      - apex-net
+    profiles:
+      - monitoring
+
+  # ── Regulatory data sidecar (OpenBB AGPL — isolated from main backend) ─────
+  openbb-service:
+    build:
+      context: ./backend/connectors
+      dockerfile: docker/Dockerfile.openbb_service
+    container_name: apex-openbb-service
+    restart: unless-stopped
+    networks:
+      - apex-net
+    profiles:
+      - openbb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:6900/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+
+  # ── On-prem profile (A1). Not started by plain `docker compose up`. ────────
+  # pull_policy never: compose up does not pull a registry image.
+  # No build: key, so up does not fetch a public base image either.
+  # Images are not stored in git. Postgres and redis reuse the tags the
+  # default file already names; they run only if that image is already local.
+  # Backend expects a locally tagged image apex-onprem-backend:local.
+  postgres-onprem:
+    profiles: ["onprem"]
+    image: timescale/timescaledb:2.30.2-pg18
+    pull_policy: never
+    container_name: apex-onprem-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: apex_intel
+      POSTGRES_USER: apex
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      TIMESCALEDB_TELEMETRY: "off"
+    volumes:
+      - postgres_data_onprem:/var/lib/postgresql
+      - ./infrastructure/docker/init-timescale.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:5433:5432"
+    networks:
+      - onprem
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U apex -d apex_intel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-onprem:
+    profiles: ["onprem"]
+    image: redis:7-alpine
+    pull_policy: never
+    container_name: apex-onprem-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1
+    volumes:
+      - redis_data_onprem:/data
+    ports:
+      - "127.0.0.1:6380:6379"
+    networks:
+      - onprem
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend-onprem:
+    profiles: ["onprem"]
+    image: apex-onprem-backend:local
+    pull_policy: never
+    container_name: apex-onprem-backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      LLM_PROVIDER: onprem
+      LLM_ONPREM: "true"
+      LLM_ENABLED: "false"
+      LLM_ONPREM_BASE_URL: ""
+      LLM_ONPREM_API_KEY: ""
+      AITUNNEL_BASE_URL: ""
+      AITUNNEL_API_KEY: ""
+      OPENAI_API_KEY: ""
+    volumes:
+      - model_data:/app/models
+      - ./backend:/app:delegated
+    ports:
+      - "127.0.0.1:8001:8000"
+    networks:
+      - onprem
+    depends_on:
+      postgres-onprem:
+        condition: service_healthy
+      redis-onprem:
+        condition: service_healthy
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000
+      "
+

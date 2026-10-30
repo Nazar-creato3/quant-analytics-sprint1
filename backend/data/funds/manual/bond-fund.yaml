@@ -1,0 +1,23 @@
+fund_figi: BBGBOND
+ticker: BOND_F
+as_of: "2026-09-30"
+source: manual
+composition_note: ""
+source_url: "https://example.test/manual/bond-fund"
+holdings:
+  - holding_isin: RU000A0JX0J2
+    holding_name: SBER_BOND
+    issuer: SBER
+    weight: "0.05"
+    asset_class: bond
+    currency: RUB
+    country: RU
+    sector: banks
+  - holding_isin: SU26238RMFS4
+    holding_name: OFZ
+    issuer: MINFIN
+    weight: "0.95"
+    asset_class: bond
+    currency: RUB
+    country: RU
+    sector: sovereign

@@ -1,0 +1,4 @@
+[
+  {"external_id": "op-1", "kind": "buy", "ticker": "SBER", "qty": "10", "amount": "2500", "ccy": "RUB", "event_time": "2024-01-15T10:00:00+00:00"},
+  {"external_id": "op-2", "kind": "dividend", "ticker": "SBER", "qty": "0", "amount": "12.5", "ccy": "RUB", "event_time": "2024-02-01T00:00:00+00:00"}
+]

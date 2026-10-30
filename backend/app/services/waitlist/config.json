@@ -1,0 +1,9 @@
+{
+  "consent_text": null,
+  "personal_price": null,
+  "professional_price": null,
+  "max_joins": 5,
+  "mail_transport": null,
+  "slack_webhook": null,
+  "storage_region": null
+}

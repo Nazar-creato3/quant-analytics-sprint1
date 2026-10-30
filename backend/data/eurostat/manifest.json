@@ -1,0 +1,17 @@
+{
+  "datasets": {
+    "eu_gdp_growth": {
+      "dataset_file": "tec00115.csv",
+      "zip_path": "C:\\Users\\B.I.G\\Desktop\\quant_analytics\\кванткод2\\apex-intel\\рыночные данные\\ЕВРОСТАТ\\ESTAT_downloads_data_2026_07_24_00_52.zip",
+      "zip_fingerprint": "0c3d68fd7c7bab76",
+      "extracted_at": "2026-07-24T00:40:47.880251+00:00"
+    },
+    "eu_gdp_yoy_q": {
+      "dataset_file": "namq_10_gdp.csv",
+      "zip_path": "C:\\Users\\B.I.G\\Desktop\\quant_analytics\\кванткод2\\apex-intel\\рыночные данные\\ЕВРОСТАТ\\ESTAT_downloads_data_2026_07_23_23_36.zip",
+      "zip_fingerprint": "73743252122ffbc2",
+      "extracted_at": "2026-07-24T00:41:05.237739+00:00"
+    }
+  },
+  "updated_at": "2026-07-24T00:41:05.253646+00:00"
+}

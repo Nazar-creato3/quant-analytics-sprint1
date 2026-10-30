@@ -1,0 +1,5 @@
+{
+  "max_order_notional": "100000",
+  "max_daily_turnover": "300000",
+  "max_orders_per_minute": 5
+}

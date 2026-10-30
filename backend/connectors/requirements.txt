@@ -1,0 +1,3 @@
+# Shared connector deps (binance-ws, moex-iss, news-aggregator, stream-consumer).
+# Tinkoff client uses requirements-tinkoff.txt instead.
+-r requirements-base.txt

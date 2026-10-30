@@ -1,0 +1,98 @@
+{
+  "title": "Apex Intel — Application Dashboard",
+  "uid": "apex-main",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "rate(apex_http_requests_total[1m])",
+        "legendFormat": "{{method}} {{endpoint}} {{status_code}}"
+      }]
+    },
+    {
+      "id": 2,
+      "title": "HTTP p99 Latency (s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "histogram_quantile(0.99, rate(apex_http_request_duration_seconds_bucket[5m]))",
+        "legendFormat": "p99 {{endpoint}}"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "Pipeline Runs",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "targets": [{
+        "expr": "increase(apex_pipeline_runs_total[24h])",
+        "legendFormat": "{{status}}"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "Maneuvers Generated (24h)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "targets": [{
+        "expr": "increase(apex_maneuvers_generated_total[24h])"
+      }]
+    },
+    {
+      "id": 5,
+      "title": "Execution Orders",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [{
+        "expr": "increase(apex_execution_orders_total[24h])",
+        "legendFormat": "{{side}} {{status}}"
+      }]
+    },
+    {
+      "id": 6,
+      "title": "Portfolio Exposure %",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [{ "expr": "apex_portfolio_exposure_pct" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 100,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Model Inference Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [{
+        "expr": "histogram_quantile(0.95, rate(apex_model_inference_duration_seconds_bucket[5m]))",
+        "legendFormat": "p95 {{model_type}}"
+      }]
+    },
+    {
+      "id": 8,
+      "title": "Cache Hit Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [{
+        "expr": "rate(apex_cache_hits_total[5m]) / (rate(apex_cache_hits_total[5m]) + rate(apex_cache_misses_total[5m]))",
+        "legendFormat": "{{namespace}}"
+      }]
+    }
+  ]
+}

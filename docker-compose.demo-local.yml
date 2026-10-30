@@ -1,0 +1,52 @@
+# Local copy of the platform on the founder's computer, for recording the demo
+# when the server is unavailable. Real Moscow Exchange prices (ISS), no demo
+# fixtures, paper mode only. Start with scripts/local-demo.ps1.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.demo-local.yml up -d
+#
+# UI http://localhost:3000, API http://localhost:8000.
+
+x-demo-env: &demo-env
+  APP_ENV: development
+  DEBUG: "false"
+  LIVE_TRADING_ENABLED: "false"
+  PHONE_SIGNIN_REQUIRED: "false"
+  MOEX_API_TOKEN: ${MOEX_API_TOKEN:-}
+  MOEX_USERNAME: ${MOEX_USERNAME:-}
+  MOEX_PASSWORD: ${MOEX_PASSWORD:-}
+
+# Own container names: an older local run may still hold the apex-* names.
+# Postgres, Redis and MLflow are not published to the host (only 8000 and 3000).
+services:
+  postgres:
+    container_name: qa-local-postgres
+    ports: !reset []
+  redis:
+    container_name: qa-local-redis
+    ports: !reset []
+  mlflow:
+    container_name: qa-local-mlflow
+    ports: !reset []
+  backend:
+    container_name: qa-local-backend
+    environment: *demo-env
+  celery-pipeline:
+    container_name: qa-local-celery-pipeline
+    environment: *demo-env
+  celery-ingestion:
+    container_name: qa-local-celery-ingestion
+    environment: *demo-env
+  celery-execution:
+    container_name: qa-local-celery-exec
+    environment: *demo-env
+  celery-beat:
+    container_name: qa-local-celery-beat
+    environment: *demo-env
+  frontend:
+    container_name: qa-local-frontend
+    build:
+      args:
+        # The browser talks to the API directly; CORS allows localhost:3000 in development.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
