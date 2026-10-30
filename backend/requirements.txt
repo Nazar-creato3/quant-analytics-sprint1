@@ -46,7 +46,7 @@ torch>=2.13.0,<3.0.0
 safetensors>=0.4.5
 joblib==1.4.2
 statsmodels==0.15.0
-mapie==0.9.1
+mapie==1.6.0
 darts==0.48.1
 hmmlearn==0.3.3
 mlflow==3.17.1
