@@ -1,0 +1,32 @@
+# Optional trading-engine dependencies (install into backend/.venv)
+#   backend\.venv\Scripts\pip.exe install -r backend/requirements-trading-engines.txt
+#
+# CCXT is already in requirements-crypto-stack.txt (Module 1 — required).
+# Others are optional — health endpoints report honest missing status.
+
+# Module 2 — fast vectorized backtest (verify license in installed package)
+vectorbt>=0.26.0
+# vectorbt templates break on Plotly 6+ (scattermapbox removed)
+plotly>=5.18.0,<6
+
+# Module 2+5 — event-driven backtest + live (LGPL — use unmodified)
+# Heavy build; install on hosts with toolchain. Reference clone under third_party/nautilus_trader.
+nautilus-trader>=1.200.0
+
+# Module 4 — optional official FinRL wheel (MIT). Apex trains PPO in-process
+# without ElegantRL. pip finrl is not required for train/infer.
+gymnasium>=0.29.0
+finrl>=0.3.6
+
+# Module 5 — multi-asset manual order alternative (verify license)
+lumibot>=3.0.0
+
+# Freqtrade / Hummingbot: sidecar/reference clones under third_party/ — NOT pip-installed (GPL/reference)
+
+# FinRL imports these at package import time but does not declare them.
+stable-baselines3>=2.3.0
+stockstats>=0.6.2
+wrds>=3.1.0
+# Runtime deps of alpaca-trade-api (installed --no-deps, see requirements-trading-engines-nodeps.txt)
+websocket-client>=1.6.0
+deprecation>=2.1.0

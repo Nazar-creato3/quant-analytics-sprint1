@@ -1,0 +1,33 @@
+﻿# Host must install Russian Trusted root/sub CAs first — see docs/VENUE_SETUP_PACK.md (T-Bank TLS section).
+# Applies to MOEX passport.moex.com, T-Bank, and other *.ru TLS chains missing from certifi alone.
+services:
+  backend:
+    environment:
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+    volumes:
+      - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
+  celery-pipeline:
+    environment:
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+    volumes:
+      - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
+  celery-ingestion:
+    environment:
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+    volumes:
+      - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
+  celery-execution:
+    environment:
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+    volumes:
+      - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
+  celery-beat:
+    environment:
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+    volumes:
+      - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro

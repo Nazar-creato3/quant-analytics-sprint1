@@ -1,0 +1,18 @@
+{
+  "vendor": "moex",
+  "request": {
+    "url": "https://iss.moex.com/iss/engines/stock/markets/shares/boards.json",
+    "headers": {
+      "Authorization": "***"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "boards": {
+        "columns": ["boardid"],
+        "data": [["TQBR"]]
+      }
+    }
+  }
+}

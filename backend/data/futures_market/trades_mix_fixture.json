@@ -1,0 +1,6 @@
+[
+  {"price": 100, "qty": 10, "side": "buy"},
+  {"price": 100, "qty": 5, "side": "sell"},
+  {"price": 101, "qty": 40, "side": "buy"},
+  {"price": 102, "qty": 8, "side": "sell"}
+]

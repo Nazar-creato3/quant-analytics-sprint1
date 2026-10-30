@@ -1,0 +1,106 @@
+{
+  "as_of": "2026-10-13",
+  "source": "tests/fixtures/payouts/universe.json",
+  "tinvest_method": "GetDividends",
+  "iss_dividends": "/iss/securities/{secid}/dividends.json",
+  "positions": [
+    {"ticker": "SBER", "figi": "BBG004730N88", "qty": "80", "kind": "equity_ru", "price": 100},
+    {"ticker": "GAZP", "figi": "BBG004730RP0", "qty": "20", "kind": "equity_ru", "price": 100},
+    {"ticker": "AAPL", "figi": "BBG000B9XRY4", "qty": "2", "kind": "equity_foreign", "price": 180},
+    {"ticker": "LQDT", "figi": "BBG00XXXXLQD", "qty": "10", "kind": "fund", "price": 1001}
+  ],
+  "dividends": [
+    {
+      "figi": "BBG004730N88",
+      "secid": "SBER",
+      "ticker": "SBER",
+      "name": "Сбербанк",
+      "type": "dividend",
+      "amount_gross": 35.0,
+      "currency": "RUB",
+      "declared_date": "2026-09-01",
+      "record_date": "2026-11-09",
+      "last_buy_date_broker": null,
+      "payment_date": "2026-11-25",
+      "status": "declared",
+      "source": "tinvest"
+    },
+    {
+      "figi": "BBG004730RP0",
+      "secid": "GAZP",
+      "ticker": "GAZP",
+      "name": "Газпром",
+      "type": "dividend",
+      "amount_gross": null,
+      "currency": "RUB",
+      "declared_date": "2026-09-15",
+      "record_date": "2026-12-14",
+      "last_buy_date_broker": "2026-12-11",
+      "payment_date": null,
+      "status": "recommended",
+      "source": "tinvest"
+    },
+    {
+      "figi": "BBG004730N88",
+      "secid": "SBER",
+      "ticker": "SBER",
+      "name": "Сбербанк",
+      "type": "dividend",
+      "amount_gross": null,
+      "currency": "RUB",
+      "declared_date": null,
+      "record_date": "2027-07-15",
+      "last_buy_date_broker": null,
+      "payment_date": null,
+      "status": "estimated",
+      "source": "history"
+    },
+    {
+      "figi": "BBG00XXXXLQD",
+      "secid": "LQDT",
+      "ticker": "LQDT",
+      "name": "Фонд денежного рынка",
+      "type": "fund_payout",
+      "amount_gross": 2.5,
+      "currency": "RUB",
+      "declared_date": "2026-10-01",
+      "record_date": "2026-10-31",
+      "last_buy_date_broker": "2026-10-30",
+      "payment_date": "2026-11-05",
+      "status": "declared",
+      "source": "tinvest"
+    },
+    {
+      "figi": "BBG000B9XRY4",
+      "secid": "AAPL",
+      "ticker": "AAPL",
+      "name": "Apple",
+      "type": "dividend",
+      "amount_gross": 0.25,
+      "currency": "USD",
+      "declared_date": "2026-08-01",
+      "record_date": "2026-11-10",
+      "last_buy_date_broker": "2026-11-07",
+      "payment_date": "2026-11-14",
+      "status": "declared",
+      "source": "tinvest",
+      "foreign": true
+    }
+  ],
+  "trailing_12m_declared": {
+    "SBER": 35.0,
+    "GAZP": null,
+    "LQDT": 12.0,
+    "AAPL": null
+  },
+  "gaps": {
+    "SBER": {
+      "mean_open_change": -0.021,
+      "median_open_change": -0.019,
+      "mean_days_to_fill": 4.2,
+      "n": 5,
+      "as_of": "2026-10-13",
+      "source": "fixture history 5y"
+    }
+  }
+}

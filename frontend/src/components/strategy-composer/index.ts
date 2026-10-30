@@ -1,0 +1,1 @@
+export { StrategyComposerView } from "./StrategyComposerView";

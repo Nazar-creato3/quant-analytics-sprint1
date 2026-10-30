@@ -1,0 +1,6 @@
+{
+  "max_active": 5,
+  "ttl_hours": 24,
+  "price_move_pct": "0.02",
+  "default_lot": "1"
+}

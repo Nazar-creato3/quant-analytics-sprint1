@@ -1,0 +1,8 @@
+# Minimal deps for the grid_bot pytest release gate (994 tests).
+# Use on Python 3.11–3.14 when full requirements.txt fails (e.g. scikit-learn build on 3.14).
+# From backend/: pip install -r requirements-grid-bot-test.txt
+
+pytest==9.0.3
+pytest-asyncio==1.4.0
+pytest-cov==5.0.0          # pytest.ini addopts includes --no-cov
+openpyxl==3.1.5            # Excel .xlsx export/import tests (8 tests)

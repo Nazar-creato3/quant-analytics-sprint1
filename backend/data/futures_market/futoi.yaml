@@ -1,0 +1,27 @@
+source: "fixture/moex-futoi"
+notes: "Три даты для сверки с независимым расчётом. Не живой ISS."
+rows:
+  - date: "2024-03-01"
+    ticker: MIX
+    phys_long: 1200
+    phys_short: 800
+    legal_long: 3100
+    legal_short: 3500
+    phys_count: 410
+    legal_count: 92
+  - date: "2024-03-04"
+    ticker: MIX
+    phys_long: 1250
+    phys_short: 760
+    legal_long: 3080
+    legal_short: 3570
+    phys_count: 418
+    legal_count: 90
+  - date: "2024-03-05"
+    ticker: MIX
+    phys_long: 1180
+    phys_short: 820
+    legal_long: 3150
+    legal_short: 3510
+    phys_count: 402
+    legal_count: 94

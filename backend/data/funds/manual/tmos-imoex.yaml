@@ -1,0 +1,41 @@
+fund_figi: BBGIMOEX
+ticker: TMOS
+index_code: IMOEX
+ter: "0.0069"
+as_of: "2026-09-30"
+source: index
+composition_note: "состав по индексу"
+source_url: "https://iss.moex.com/iss/statistics/engines/stock/markets/index/analytics/IMOEX.json"
+holdings:
+  - holding_isin: RU0009029540
+    holding_name: SBER
+    issuer: SBER
+    weight: "0.12"
+    asset_class: equity
+    currency: RUB
+    country: RU
+    sector: banks
+  - holding_isin: RU0007661625
+    holding_name: GAZP
+    issuer: GAZP
+    weight: "0.10"
+    asset_class: equity
+    currency: RUB
+    country: RU
+    sector: energy
+  - holding_isin: RU0009024277
+    holding_name: LKOH
+    issuer: LKOH
+    weight: "0.08"
+    asset_class: equity
+    currency: RUB
+    country: RU
+    sector: energy
+  - holding_isin: OTHEREQ
+    holding_name: OTHER
+    issuer: OTHER
+    weight: "0.70"
+    asset_class: equity
+    currency: RUB
+    country: RU
+    sector: other

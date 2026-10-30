@@ -1,0 +1,5 @@
+# Crypto stack MCP servers (Python >=3.12). Install into repo root `.venv-mcp`.
+# crypto-powerdata-mcp imports mcp.server.fastmcp (removed in mcp 2.x).
+mcp>=1.28.0,<2
+binance-context-server==1.1.0
+crypto-powerdata-mcp==0.1.0

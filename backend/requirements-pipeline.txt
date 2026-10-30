@@ -1,0 +1,45 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Celery worker + full pipeline / ML / news stack.
+#
+# WHY THIS FILE EXISTS
+#   The Celery worker imports every module in celery_app.include (pipeline,
+#   execution, backtest, data_ingestion). The pipeline pulls numpy/pandas/
+#   scikit-learn/lightgbm. These packages have prebuilt Windows wheels for
+#   CPython 3.11 but do NOT reliably build/install on Python 3.14 — which is
+#   why a global-3.14 Celery worker crashed on `import numpy` and consumed no
+#   tasks at all (news + maneuvers both dead).
+#
+# INSTALL INTO THE 3.11 VENV (from backend/):
+#   .\.venv-grid-bot-min2\Scripts\python.exe -m pip install -r requirements-pipeline.txt
+#
+# Then run BOTH uvicorn and the celery worker from that venv. See RUNBOOK_LOCAL.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Task queue ────────────────────────────────────────────────────────────────
+celery[redis]==5.6.3
+redis==5.1.1
+
+# ── HTTP client (market data + news REST calls) ────────────────────────────────
+httpx==0.27.2
+
+# ── Data / ML (pipeline + maneuver generation) ─────────────────────────────────
+numpy==2.2.6
+pandas==3.0.6
+scikit-learn==1.5.2
+lightgbm==4.6.0
+joblib==1.4.2
+
+# ── News sentiment ─────────────────────────────────────────────────────────────
+vaderSentiment==3.3.2
+
+# ── Market data provider (MARKET_DATA_PROVIDER=yfinance, no API key needed) ─────
+# yfinance 0.2.x breaks against Yahoo's current crumb/cookie flow ("Expecting
+# value: line 1 column 1" / "possibly delisted; no timezone found"). 1.5.x +
+# curl_cffi (browser impersonation) fixes it — verified fetching SPY/QQQ/GLD/
+# BTC-USD. Keep both pinned together.
+yfinance==1.5.1
+curl_cffi>=0.15.0
+
+# NOTE: torch and alpaca-py from requirements.txt are intentionally omitted —
+# nothing in the runtime import path uses them (Alpaca is called via httpx REST),
+# and torch is a very large download that only slows the install down.

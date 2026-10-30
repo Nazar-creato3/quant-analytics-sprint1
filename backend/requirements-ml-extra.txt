@@ -1,0 +1,5 @@
+# Optional heavy ML extras (install when image budget / ops policy allows).
+# Chronos is now in requirements.txt (baked into the backend image).
+# Full Feast registry is intentionally NOT baked — prod uses local PIT JSON store.
+# See docs/ML_STACK_STATUS.md.
+feast>=0.40.0

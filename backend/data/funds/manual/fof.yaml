@@ -1,0 +1,27 @@
+fund_figi: BBGFUND2
+ticker: FOF_X
+as_of: "2026-09-30"
+source: manual
+composition_note: ""
+source_url: "https://example.test/manual/fof"
+holdings:
+  - holding_isin: BBGIMOEX
+    holding_name: TMOS
+    issuer: TMOS
+    weight: "0.50"
+    asset_class: fund
+    currency: RUB
+    country: RU
+    sector: fund
+    is_fund: true
+    child_figi: BBGIMOEX
+  - holding_isin: BBGBOND
+    holding_name: BOND_F
+    issuer: BOND_F
+    weight: "0.50"
+    asset_class: fund
+    currency: RUB
+    country: RU
+    sector: fund
+    is_fund: true
+    child_figi: BBGBOND

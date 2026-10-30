@@ -1,0 +1,27 @@
+# Slim image for compose project `ci` only. Not production.
+# Full requirements.txt cannot resolve (darts vs numpy 2, D-01-2).
+# Stage name `runtime` matches historical compose target.
+# No BuildKit syntax line: that pulls docker/dockerfile from docker.io (TLS hang).
+FROM python:3.13-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
+    PYTHONUTF8=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=30 \
+    PIP_RETRIES=8
+
+WORKDIR /app
+
+# No apt-get: Debian indexes + curl/libpq blew Docker Desktop RAM on local-pc.
+# psycopg2-binary ships its own libpq. Healthcheck uses stdlib urllib.
+
+COPY requirements-backend-minimal.txt /tmp/requirements-backend-minimal.txt
+# celery + numpy: API boot (tasks, risk_engine.fhs). pandas is not installed here
+# (Docker Desktop on the Windows runner lost the agent while compiling/installing it).
+RUN pip install --no-cache-dir -r /tmp/requirements-backend-minimal.txt \
+    'httpx>=0.27.2' 'PyJWT==2.15.1' 'celery>=5.6.3' 'numpy>=2.2.6'
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

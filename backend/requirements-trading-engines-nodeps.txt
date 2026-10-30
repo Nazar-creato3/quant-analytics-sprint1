@@ -1,0 +1,4 @@
+# Installed with --no-deps: FinRL imports alpaca_trade_api, whose metadata pins
+# ancient websockets/aiohttp/urllib3. Its real runtime deps are listed in
+# requirements-trading-engines.txt.
+alpaca-trade-api==3.2.0

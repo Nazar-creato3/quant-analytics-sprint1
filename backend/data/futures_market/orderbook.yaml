@@ -1,0 +1,19 @@
+ticker: MIX
+mean_level_qty: 10
+rows:
+  - price: 101.0
+    qty: 80
+    side: bid
+    age_sec: 42
+  - price: 100.5
+    qty: 12
+    side: bid
+    age_sec: 5
+  - price: 101.5
+    qty: 11
+    side: ask
+    age_sec: 3
+  - price: 102.0
+    qty: 90
+    side: ask
+    age_sec: 18

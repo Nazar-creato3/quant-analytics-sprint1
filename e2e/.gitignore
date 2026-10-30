@@ -1,0 +1,4 @@
+node_modules/
+.lighthouse/
+test-results/
+playwright-report/

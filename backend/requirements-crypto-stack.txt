@@ -1,0 +1,14 @@
+# Crypto stack extras (optional local install — not required for core Docker image)
+# Install into backend/.venv (Python 3.11, matches Dockerfile):
+#   backend\.venv\Scripts\pip.exe install -r backend/requirements-crypto-stack.txt
+#
+# MCP servers require Python >=3.12 — install into repo-root .venv (3.14) or a dedicated MCP venv:
+#   .\.venv\Scripts\pip.exe install binance-context-server==1.1.0 crypto-powerdata-mcp==0.1.0
+
+cryptodatapy==0.3.3
+ccxt>=4.4.0
+streamlit>=1.40.0
+supabase>=2.10.0
+
+# Optional editable third_party tools (after clone):
+# -e ../third_party/CryptoDevTools

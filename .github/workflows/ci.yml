@@ -1,0 +1,575 @@
+
+
+
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    branches: [main, master, "qa/**"]
+  schedule:
+    - cron: "15 3 * * *"
+  workflow_dispatch:
+
+# local-pc only (no GitHub-hosted minutes). Cancel superseded SHA.
+# Do not set cache: pip/npm on setup-python/setup-node: the post cache step hangs ~25–30m on this runner.
+# Heavy jobs: push to main, nightly schedule, workflow_dispatch — never on PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHON_VERSION: "3.13"
+  NODE_VERSION: "20"
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+  PIP_CACHE_DIR: /c/actions-runner/_cache/pip
+  UV_CACHE_DIR: /c/actions-runner/_cache/uv
+  npm_config_cache: /c/actions-runner/_cache/npm
+  QA_CACHE: /c/actions-runner/_cache
+
+jobs:
+  detect:
+    name: Detect paths
+    runs-on: [self-hosted, local-pc]
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.p.outputs.mode }}
+      run_baseline: ${{ steps.p.outputs.run_baseline }}
+      run_backend: ${{ steps.p.outputs.run_backend }}
+      run_frontend: ${{ steps.p.outputs.run_frontend }}
+      run_gitleaks: ${{ steps.p.outputs.run_gitleaks }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+          clean: false
+          submodules: false
+      - id: p
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bash .github/scripts/ci-path-detect.sh
+
+  # ── NEVER REGRESS baseline guards (static, no secrets) ───────────────────────
+  baseline-gates:
+    name: Baseline Guards
+    needs: detect
+    runs-on: [self-hosted, local-pc]
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+
+    steps:
+      - name: Path skip
+        if: needs.detect.outputs.run_baseline != 'true'
+        run: echo "skip baseline (mode=${{ needs.detect.outputs.mode }})"
+        working-directory: .
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.run_baseline == 'true'
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+          clean: false
+          submodules: false
+
+      - uses: actions/setup-python@v5
+        if: needs.detect.outputs.run_baseline == 'true'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install pytest
+        if: needs.detect.outputs.run_baseline == 'true'
+        run: pip install --upgrade pip pytest pytest-cov
+
+      - name: Run baseline guard tests
+        if: needs.detect.outputs.run_baseline == 'true'
+        run: pytest app/tests/test_baseline_guards.py -v --tb=short
+
+      - name: Verify baseline tag exists
+        if: needs.detect.outputs.run_baseline == 'true'
+        working-directory: .
+        env:
+          GIT_TERMINAL_PROMPT: "0"
+          GIT_HTTP_LOW_SPEED_LIMIT: "1000"
+          GIT_HTTP_LOW_SPEED_TIME: "30"
+        run: |
+          MANIFEST_TAG="$(python -c "import json; print(json.load(open('docs/baseline/manifest.json'))['tag'])")"
+          if git rev-parse "$MANIFEST_TAG" >/dev/null 2>&1; then
+            echo "Baseline tag present: $MANIFEST_TAG @ $(git rev-list -n 1 "$MANIFEST_TAG")"
+            exit 0
+          fi
+          git fetch origin tag "$MANIFEST_TAG" --no-tags
+          if ! git rev-parse "$MANIFEST_TAG" >/dev/null 2>&1; then
+            echo "::error::Baseline tag $MANIFEST_TAG from manifest.json is missing. Run capture_baseline_snapshot.ps1 and push the tag."
+            exit 1
+          fi
+          echo "Baseline tag present: $MANIFEST_TAG @ $(git rev-list -n 1 "$MANIFEST_TAG")"
+
+  # ── Backend: lint + type check ───────────────────────────────────────────────
+  backend-lint:
+    name: Backend Lint & Type Check
+    needs: detect
+    runs-on: [self-hosted, local-pc]
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+
+    steps:
+      - name: Path skip
+        if: needs.detect.outputs.run_backend != 'true'
+        run: echo "skip lint (mode=${{ needs.detect.outputs.mode }})"
+        working-directory: .
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.run_backend == 'true'
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+          clean: false
+          submodules: false
+
+      - uses: actions/setup-python@v5
+        if: needs.detect.outputs.run_backend == 'true'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dev deps
+        if: needs.detect.outputs.run_backend == 'true'
+        run: |
+          mkdir -p "$PIP_CACHE_DIR"
+          pip install --upgrade pip
+          pip install ruff mypy types-passlib
+
+      - name: Compile CI-critical endpoints
+        if: needs.detect.outputs.run_backend == 'true'
+        run: python -m compileall app/api/v1/endpoints/account.py app/api/v1/endpoints/accounts.py
+
+      - name: Ruff lint CI-critical endpoints
+        if: needs.detect.outputs.run_backend == 'true'
+        run: ruff check app/api/v1/endpoints/account.py app/api/v1/endpoints/accounts.py --select=E,W,F,I --ignore=E501
+
+      - name: Ruff format check CI-critical endpoints
+        if: needs.detect.outputs.run_backend == 'true'
+        run: ruff format app/api/v1/endpoints/account.py app/api/v1/endpoints/accounts.py --check
+
+  # ── Backend: unit + integration tests ────────────────────────────────────────
+  backend-test:
+    name: Backend Tests
+    needs: detect
+    runs-on: [self-hosted, local-pc]
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+
+    env:
+      DATABASE_URL: "sqlite+aiosqlite:///./test.db"
+      DATABASE_URL_SYNC: "sqlite:///./test.db"
+      REDIS_URL: "redis://127.0.0.1:6451/0"
+      CELERY_BROKER_URL: "redis://127.0.0.1:6451/1"
+      CELERY_RESULT_BACKEND: "redis://127.0.0.1:6451/2"
+      SECRET_KEY: "ci-test-secret-key-32chars-minimum"
+      WHITELIST_EMAILS: "test@example.com,admin@example.com"
+      PAPER_TRADING_ENABLED: "true"
+      LIVE_TRADING_ENABLED: "false"
+      APP_ENV: "development"
+      LLM_ENABLED: "false"
+      MARKET_DATA_PROVIDER: "yfinance"
+
+    steps:
+      - name: Path skip
+        if: needs.detect.outputs.run_backend != 'true'
+        run: echo "skip tests (mode=${{ needs.detect.outputs.mode }})"
+        working-directory: .
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.run_backend == 'true'
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+          clean: false
+          submodules: false
+
+      - name: Start Redis on 6451
+        if: needs.detect.outputs.run_backend == 'true'
+        working-directory: .
+        run: |
+          export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin:/c/Program Files/Docker/Docker/resources"
+          if command -v docker >/dev/null 2>&1; then
+            DOCKER=docker
+          elif command -v docker.exe >/dev/null 2>&1; then
+            DOCKER=docker.exe
+          else
+            echo "::notice::Docker not on PATH; unit tests use SQLite and skip Redis-backed cases."
+            exit 0
+          fi
+          if ! "$DOCKER" info >/dev/null 2>&1; then
+            echo "::notice::Docker engine is down; unit tests use SQLite and skip Redis-backed cases."
+            exit 0
+          fi
+          "$DOCKER" rm -f ci-backend-test-redis || true
+          "$DOCKER" run -d --name ci-backend-test-redis -p 6451:6379 redis:7-alpine
+          for i in $(seq 1 30); do
+            "$DOCKER" exec ci-backend-test-redis redis-cli ping | grep -q PONG && break
+            sleep 1
+          done
+
+      - uses: actions/setup-python@v5
+        if: needs.detect.outputs.run_backend == 'true'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Reuse venv from lock hash
+        if: needs.detect.outputs.run_backend == 'true'
+        run: |
+          mkdir -p "$PIP_CACHE_DIR" "$UV_CACHE_DIR" "$QA_CACHE/venv"
+          HASH="$(sha256sum requirements-ci.lock | awk '{print $1}')"
+          VENV="$QA_CACHE/venv/ci-$HASH"
+          if [ ! -x "$VENV/Scripts/python.exe" ] && [ ! -x "$VENV/bin/python" ]; then
+            python -m venv "$VENV"
+            PY="$VENV/Scripts/python.exe"
+            [ -x "$PY" ] || PY="$VENV/bin/python"
+            "$PY" -m pip install --upgrade pip uv==0.11.21
+            "$PY" -m uv pip install -r requirements-ci.lock
+          fi
+          echo "$VENV/Scripts" >> "$GITHUB_PATH"
+          echo "$VENV/bin" >> "$GITHUB_PATH"
+
+      - name: Run quant_math coverage gate
+        if: needs.detect.outputs.run_backend == 'true'
+        run: |
+          pytest app/tests/test_quant_math.py -v \
+            --cov=app.services.quant_math \
+            --cov-fail-under=100 \
+            --tb=short
+
+      - name: Run unit tests
+        if: needs.detect.outputs.run_backend == 'true'
+        run: |
+          if [ -d tests/unit ]; then
+            pytest tests/unit/ -v \
+              --cov=app \
+              --cov-report=xml:coverage.xml \
+              --cov-report=term-missing \
+              -m "not slow" \
+              --tb=short
+          else
+            echo "::notice::tests/unit is not present; skipping legacy unit suite."
+          fi
+
+      - name: Run integration tests
+        if: needs.detect.outputs.run_backend == 'true'
+        run: |
+          if [ -d tests/integration ]; then
+            pytest tests/integration/ -v \
+              --tb=short \
+              -m "not slow"
+          else
+            echo "::notice::tests/integration is not present; skipping legacy integration suite."
+          fi
+
+      - name: Stop Redis
+        if: always() && needs.detect.outputs.run_backend == 'true'
+        working-directory: .
+        run: |
+          export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin:/c/Program Files/Docker/Docker/resources"
+          docker rm -f ci-backend-test-redis || docker.exe rm -f ci-backend-test-redis || true
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        # Legacy tests/unit is absent, so coverage.xml is often missing.
+        # codecov-action@v4 can still fail the job on an SSL handshake
+        # (EPROTO alert 40) before fail_ci_if_error is applied.
+        if: always() && needs.detect.outputs.run_backend == 'true' && hashFiles('backend/coverage.xml') != ''
+        continue-on-error: true
+        with:
+          files: ./backend/coverage.xml
+          fail_ci_if_error: false
+
+  # ── Prompt 01 connectivity gates ─────────────────────────────────────────────
+  connectivity-gates:
+    name: Connectivity Gates
+    runs-on: [self-hosted, heavy]
+    timeout-minutes: 40
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install CI deps
+        run: |
+          pip install --upgrade pip uv
+          uv pip install --system -r requirements-ci.lock
+
+      - name: Orphan check (baseline)
+        working-directory: .
+        run: python scripts/orphan_check.py --check
+
+      - name: Architecture lint (baseline)
+        working-directory: .
+        run: python scripts/architecture_lint.py --check
+
+      - name: QA harness tests
+        working-directory: .
+        env:
+          PYTHONPATH: backend
+        run: |
+          pytest backend/app/tests/test_feature_flags.py \
+            backend/app/tests/test_shadow_mode.py \
+            backend/app/tests/test_vcr_contracts.py \
+            backend/app/tests/test_orphan_check_gate.py \
+            backend/app/tests/test_golden_portfolios.py \
+            backend/app/tests/test_quant_math_properties.py \
+            backend/app/tests/test_phase0_ops.py \
+            backend/app/tests/test_catalog_resolve.py \
+            backend/app/tests/test_market_data_eod.py \
+            backend/app/tests/test_p42_quotes_charts.py \
+            backend/app/tests/test_p43_screener.py \
+            backend/app/tests/test_p44_news.py \
+            backend/app/tests/test_p45_market_analysis.py \
+            backend/app/tests/test_p46_terminal_cycle.py \
+            backend/app/tests/test_p35_investment_profile.py \
+            backend/app/tests/test_d01b_tbank_private_golden.py \
+            backend/app/tests/test_d00_1_tz_replaced.py \
+            backend/app/tests/test_session_jwt.py \
+            backend/app/tests/test_d181_wording.py \
+            backend/app/tests/test_p30_perf.py \
+            backend/app/tests/test_p31_docs.py \
+            backend/app/tests/test_p47_public_site.py \
+            backend/app/tests/test_legal_catalog.py \
+            backend/app/tests/test_p48_waitlist.py \
+            backend/app/tests/test_p49_accuracy.py \
+            backend/app/tests/test_p50_analytics.py \
+            backend/app/tests/test_p51_metrics.py \
+            backend/app/tests/test_p52_experiments.py \
+            backend/app/tests/test_p53_admin.py \
+            backend/app/tests/test_p54_subject_rights.py \
+            backend/app/tests/test_p55_support.py \
+            backend/app/tests/test_p32_acceptance.py \
+            backend/app/tests/test_p33_release.py \
+            backend/app/tests/test_p36_target_portfolio.py \
+            backend/app/tests/test_p37_maneuver_generator.py \
+            backend/app/tests/test_a1_academy.py \
+            backend/app/tests/architecture \
+            e2e/journeys/test_journeys_xfail.py \
+            -v --tb=short
+
+      - name: Testcontainers TimescaleDB + Redis
+        working-directory: .
+        env:
+          PYTHONPATH: backend
+        timeout-minutes: 8
+        run: |
+          export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin:/c/Program Files/Docker/Docker/resources"
+          if ! (docker info >/dev/null 2>&1 || docker.exe info >/dev/null 2>&1); then
+            echo "::notice::Docker engine is down; skip testcontainers (was hanging ~20m)."
+            exit 0
+          fi
+          pytest backend/app/tests/test_testcontainers_optional.py -v --tb=short
+
+      - name: pip-audit (blocking, uv.lock; wheels are not installed)
+        run: |
+          # Query the advisory DB by the pinned versions in uv.lock.
+          # --disable-pip accepts this file only because the export carries
+          # hashes. It does not download torch or the CUDA wheels.
+          # The install step above stays on requirements-ci.lock.
+          # darts, mlflow, and financetoolkit are not in the lock (D-01-2).
+          uv export --frozen --offline --no-emit-project --group ci -o requirements-audit.ci.txt
+          pip-audit -r requirements-audit.ci.txt --disable-pip
+          rm -f requirements-audit.ci.txt
+
+  gitleaks:
+    name: Gitleaks
+    needs: detect
+    runs-on: [self-hosted, local-pc]
+    timeout-minutes: 10
+    steps:
+      - name: Path skip
+        if: needs.detect.outputs.run_gitleaks != 'true'
+        run: echo "skip gitleaks (mode=${{ needs.detect.outputs.mode }})"
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.run_gitleaks == 'true'
+        with:
+          fetch-depth: 0
+          clean: false
+          submodules: false
+      - uses: gitleaks/gitleaks-action@v2
+        if: needs.detect.outputs.run_gitleaks == 'true'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Frontend: build + type check ─────────────────────────────────────────────
+  frontend-build:
+    name: Frontend Build
+    needs: detect
+    runs-on: [self-hosted, local-pc]
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+
+    steps:
+      - name: Path skip
+        if: needs.detect.outputs.run_frontend != 'true'
+        run: echo "skip frontend (mode=${{ needs.detect.outputs.mode }})"
+        working-directory: .
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.run_frontend == 'true'
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+          clean: false
+          submodules: false
+
+      - uses: actions/setup-node@v4
+        if: needs.detect.outputs.run_frontend == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install deps (persistent npm cache)
+        if: needs.detect.outputs.run_frontend == 'true'
+        run: |
+          mkdir -p "$npm_config_cache" "$QA_CACHE/next"
+          npm ci --prefer-offline --cache "$npm_config_cache"
+          # self-hosted checkout is clean:false; stale .next/types from another PR fails tsc
+          rm -rf .next/types
+          mkdir -p .next
+          if [ ! -d .next/cache ]; then
+            cmd.exe //c "mklink /J .next\\cache C:\\actions-runner\\_cache\\next" || mkdir -p .next/cache
+          fi
+          # clean:false keeps another SHA's .next/types (e.g. decision-core/page.js).
+          find .next -mindepth 1 -maxdepth 1 ! -name cache -exec rm -rf {} +
+
+      - name: npm audit (blocking, production deps)
+        if: needs.detect.outputs.run_frontend == 'true'
+        run: npm audit --omit=dev
+
+      - name: Type check
+        if: needs.detect.outputs.run_frontend == 'true'
+        run: npm run type-check
+
+      - name: Lint
+        if: needs.detect.outputs.run_frontend == 'true'
+        run: npm run lint
+
+      - name: i18n hardcoded string guard
+        if: needs.detect.outputs.run_frontend == 'true'
+        continue-on-error: true
+        run: npm run lint:i18n
+
+      - name: User-facing jargon guard
+        if: needs.detect.outputs.run_frontend == 'true'
+        continue-on-error: true
+        run: npm run lint:jargon
+
+      - name: Chart symbol binding tests
+        if: needs.detect.outputs.run_frontend == 'true'
+        run: npm run test:chart-symbols
+
+      - name: Chart required-symbol CI check
+        if: needs.detect.outputs.run_frontend == 'true'
+        continue-on-error: true
+        run: npm run lint:chart-symbols
+
+      - name: Build
+        if: needs.detect.outputs.run_frontend == 'true'
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+          NEXT_PUBLIC_APP_NAME: "Apex Intel"
+        run: npm run build
+
+      # Playwright journeys run in job `e2e` against compose `ci` (8150/3150).
+      # They need the API; localhost:8000 is not started in this job.
+
+  # ── Docker build smoke test ───────────────────────────────────────────────────
+  # Backend production image installs torch/mlflow (~3GB+) and often exhausts
+  # GitHub hosted runner disk before the layer completes. Backend runtime is
+  # covered by Backend Tests + VPS deploy build. CI smoke validates frontend
+  # Docker packaging (package-lock + next standalone) which PRs touch most often.
+  docker-smoke:
+    name: Docker Build Smoke Test
+    runs-on: [self-hosted, local-pc]
+    needs: [baseline-gates, backend-lint, backend-test, frontend-build, connectivity-gates]
+    timeout-minutes: 15
+    if: |
+      always() &&
+      (github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')))
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build frontend image (local Docker layer cache)
+        run: |
+          docker build -f frontend/Dockerfile -t apex-intel-frontend:ci \
+            --build-arg NEXT_PUBLIC_API_URL=http://127.0.0.1:8150 \
+            frontend
+
+  # e2e lives in e2e-local-pc.yml (advisory, not merge-blocking).
+
+  # ── Security scan ─────────────────────────────────────────────────────────────
+  security-scan:
+    name: Security Scan
+    runs-on: [self-hosted, local-pc]
+    needs: [detect, backend-lint]
+
+    steps:
+      - name: Path skip
+        if: needs.detect.outputs.run_backend != 'true'
+        run: echo "skip bandit (mode=${{ needs.detect.outputs.mode }})"
+      - uses: actions/checkout@v4
+        if: needs.detect.outputs.run_backend == 'true'
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+          clean: false
+          submodules: false
+
+      - uses: actions/setup-python@v5
+        if: needs.detect.outputs.run_backend == 'true'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install safety + bandit
+        if: needs.detect.outputs.run_backend == 'true'
+        run: pip install safety bandit
+
+      - name: Safety check (known CVEs)
+        if: needs.detect.outputs.run_backend == 'true'
+        working-directory: backend
+        run: safety check -r requirements.txt --output text || true
+
+      - name: Bandit static security analysis
+        if: needs.detect.outputs.run_backend == 'true'
+        working-directory: backend
+        run: |
+          bandit -r app/ \
+            -x app/tests \
+            --severity-level medium \
+            --confidence-level medium \
+            -f txt \
+            || true

@@ -1,0 +1,14 @@
+[Unit]
+Description=Apex Intel Telegram Bot API relay (Docker bridge egress)
+After=network.target
+
+[Service]
+Type=simple
+User=user1
+WorkingDirectory=/home/user1/myapp/infrastructure/telegram_relay
+ExecStart=/usr/bin/python3 /home/user1/myapp/infrastructure/telegram_relay/relay.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

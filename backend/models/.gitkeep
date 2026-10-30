@@ -1,0 +1,10 @@
+# Trained LightGBM artifacts for direction classification + SHAP.
+#
+# Generate locally:
+#   cd backend && python scripts/train_direction_model.py
+#
+# Produces:
+#   direction_lgbm.pkl
+#   direction_lgbm_calibrator.pkl
+#
+# At container startup, missing files are copied from /app/model_seeds/ (baked into the image).

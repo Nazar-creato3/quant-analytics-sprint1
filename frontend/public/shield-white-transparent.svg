@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" fill="none" aria-hidden="true">
+  <text x="60" y="22" text-anchor="middle" fill="none" stroke="#f5f5f5" stroke-width="2.2" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">QA</text>
+  <path d="M60 30 L98 44 V78 C98 104 60 128 60 128 C60 128 22 104 22 78 V44 Z" stroke="#f5f5f5" stroke-width="2" fill="none"/>
+  <path d="M34 58 L46 70 L40 76 M86 58 L74 70 L80 76" stroke="#f5f5f5" stroke-width="1.6" fill="none"/>
+  <path d="M42 52 L78 88 M78 52 L42 88" stroke="#f5f5f5" stroke-width="2.4" fill="none"/>
+  <path d="M48 98 H72 M60 98 V112 M52 112 H68" stroke="#f5f5f5" stroke-width="1.6" fill="none"/>
+  <path d="M38 112 H46 V118 H38 Z" stroke="#f5f5f5" stroke-width="1.4" fill="none"/>
+</svg>
