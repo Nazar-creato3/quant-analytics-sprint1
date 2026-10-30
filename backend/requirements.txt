@@ -109,7 +109,7 @@ seaborn>=0.13.0
 # ── Fundamentals (FMP free tier). FA is legacy; FinanceToolkit is the successor.
 # FundamentalAnalysis does not install on Python >=3.13 (local 3.14); Docker 3.11 gets it.
 FundamentalAnalysis>=0.3.0; python_version < "3.13"
-financetoolkit>=1.9.0
+financetoolkit>=2.3.0
 
 # ── OpenTelemetry (prompt 29; SDK 1.x, no instrumentation-beta packages) ──────
 opentelemetry-api==1.45.1
