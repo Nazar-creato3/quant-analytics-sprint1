@@ -49,7 +49,7 @@ statsmodels==0.15.0
 mapie==0.9.1
 darts==0.48.1
 hmmlearn==0.3.3
-mlflow==3.17.1
+mlflow==3.17.2
 transformers>=5.10.0,<6.0.0
 chronos-forecasting>=2.3.0,<3.0.0
 # Feast is optional and heavy (full feature registry). Default is local PIT store.
