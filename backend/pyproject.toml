@@ -7,7 +7,7 @@ requires-python = ">=3.13,<3.14"
 description = "Quant Analytics backend. Direct pins are requirements.txt; transitive lock is uv.lock."
 dependencies = [
     "fastapi==0.142.2",
-    "uvicorn[standard]==0.30.6",
+    "uvicorn[standard]==0.54.0",
     "python-multipart==0.0.31",
     "pydantic[email]==2.13.5",
     "pydantic-settings==2.15.0",
