@@ -2,7 +2,7 @@
 name = "apex-intel-backend"
 version = "0.1.0"
 # Product image and CI are CPython 3.13 (docs/architecture/tech-stack.md).
-# numpy==2.2.6; torch>=2.13,<3 clears D-01-2 advisories on CPython 3.13.
+# numpy==2.5.4; torch>=2.13,<3 clears D-01-2 advisories on CPython 3.13.
 requires-python = ">=3.13,<3.14"
 description = "Quant Analytics backend. Direct pins are requirements.txt; transitive lock is uv.lock."
 dependencies = [
@@ -27,7 +27,7 @@ dependencies = [
     "passlib[bcrypt,argon2]==1.7.4",
     "argon2-cffi>=23.1.0",
     "qrcode[pil]==8.0",
-    "numpy==2.2.6",
+    "numpy==2.5.4",
     "pandas==3.0.6",
     "scikit-learn==1.5.2",
     "lightgbm==4.6.0",
