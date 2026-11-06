@@ -12,7 +12,7 @@ pydantic[email]==2.13.5
 email-validator==2.2.0
 
 # ── Database ──────────────────────────────────────────────────────────────────
-sqlalchemy==2.0.36
+sqlalchemy==2.1.6
 # async engine needs greenlet; sqlalchemy only auto-requires it on Python < 3.13
 greenlet>=3.1.1
 asyncpg==0.30.0
