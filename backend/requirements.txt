@@ -97,7 +97,7 @@ pytest==9.0.3
 pytest-asyncio==1.4.0
 pytest-cov==5.0.0
 anyio[trio]==4.14.2
-hypothesis==6.112.1
+hypothesis==6.170.14
 
 # ── Position audit tear sheets ────────────────────────────────────────────────
 quantstats==0.0.62
