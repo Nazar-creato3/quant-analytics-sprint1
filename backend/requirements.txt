@@ -18,7 +18,7 @@ greenlet>=3.1.1
 asyncpg==0.30.0
 aiosqlite==0.20.0
 alembic==1.13.3
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.13
 
 # ── Cache / Queue ─────────────────────────────────────────────────────────────
 redis[asyncio]==5.1.1
